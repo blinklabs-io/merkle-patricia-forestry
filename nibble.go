@@ -14,7 +14,13 @@
 
 package mpf
 
+import "encoding/hex"
+
 type Nibble byte
+
+func (n Nibble) String() string {
+	return hex.EncodeToString([]byte{byte(n)})[1:]
+}
 
 // bytesToNibbles splits a series of bytes into a series of nibbles
 func bytesToNibbles(data []byte) []Nibble {
@@ -34,4 +40,24 @@ func byteToNibbles(data byte) []Nibble {
 		Nibble(data >> 4),
 		Nibble(data & 0xf),
 	}
+}
+
+// nibblesToBytes converts a series of Nibbles into a byte slice representing the original bytes.
+// This function assumes the input length is even
+func nibblesToBytes(data []Nibble) []byte {
+	ret := make([]byte, 0, len(data)/2)
+	for i := 0; i < len(data); i += 2 {
+		tmpByte := byte(data[i]<<4) + byte(data[i+1])
+		ret = append(ret, tmpByte)
+	}
+	return ret
+}
+
+// nibblesToHexString converts a series of Nibbles into a hex string representing those nibbles.
+func nibblesToHexString(data []Nibble) string {
+	var ret string
+	for _, nibble := range data {
+		ret += nibble.String()
+	}
+	return ret
 }

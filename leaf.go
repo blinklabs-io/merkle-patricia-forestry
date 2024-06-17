@@ -14,22 +14,40 @@
 
 package mpf
 
+import "fmt"
+
 type Leaf struct {
 	hash   Hash
 	suffix []Nibble
+	key    []byte
 	value  []byte
 }
 
-func newLeaf(suffix []Nibble, value []byte) *Leaf {
+func newLeaf(suffix []Nibble, key []byte, value []byte) *Leaf {
 	l := &Leaf{}
 	if suffix != nil {
 		l.suffix = append(l.suffix, suffix...)
+	}
+	if key != nil {
+		l.key = append(l.key, key...)
 	}
 	l.Set(value)
 	return l
 }
 
-func (l Leaf) isChildNode() {}
+func (l Leaf) isNode() {}
+
+func (l *Leaf) String() string {
+	return fmt.Sprintf(
+		"%s #%s { %s (%x) -> %s (%x) }",
+		nibblesToHexString(l.suffix),
+		l.hash.String()[:10],
+		l.key,
+		l.key,
+		l.value,
+		l.value,
+	)
+}
 
 func (l *Leaf) Hash() Hash {
 	return l.hash
@@ -46,10 +64,12 @@ func (l *Leaf) Set(value []byte) {
 }
 
 func (l *Leaf) updateHash() {
-	valueHash := HashValue(l.value)
+	tmpVal := []byte{}
 	head := hashHead(l.suffix)
+	tmpVal = append(tmpVal, head...)
 	tail := hashTail(l.suffix)
-	tmpVal := append(head, tail...)
+	tmpVal = append(tmpVal, tail...)
+	valueHash := HashValue(l.value)
 	tmpVal = append(tmpVal, valueHash.Bytes()...)
 	l.hash = HashValue(tmpVal)
 }
@@ -59,23 +79,17 @@ func hashHead(suffix []Nibble) []byte {
 		// Return 0xff for even length
 		return []byte{0xff}
 	} else {
-		// Return 0x00 and first nibble for odd length
-		return []byte{0x00, byte(suffix[0])}
+		// Return 0x0 and first nibble for odd length
+		return []byte{0x0, byte(suffix[0])}
 	}
 }
 
 func hashTail(suffix []Nibble) []byte {
-	var ret []byte
 	if len(suffix)%2 == 0 {
 		// Return entire suffix for even length
-		for _, nibble := range suffix {
-			ret = append(ret, byte(nibble))
-		}
+		return nibblesToBytes(suffix)
 	} else {
 		// Return suffix minus first nibble for odd length
-		for _, nibble := range suffix[1:] {
-			ret = append(ret, byte(nibble))
-		}
+		return nibblesToBytes(suffix[1:])
 	}
-	return ret
 }
