@@ -61,3 +61,10 @@ func nibblesToHexString(data []Nibble) string {
 	}
 	return ret
 }
+
+// keyToPath converts an arbitrary key to the sequence of Nibbles representing the path to the value
+func keyToPath(key []byte) []Nibble {
+	keyHash := HashValue(key)
+	keyHashNibbles := bytesToNibbles(keyHash.Bytes())
+	return keyHashNibbles
+}

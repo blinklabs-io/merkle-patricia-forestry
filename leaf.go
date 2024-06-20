@@ -63,6 +63,22 @@ func (l *Leaf) Set(value []byte) {
 	l.updateHash()
 }
 
+func (l *Leaf) generateProof(path []Nibble) (*Proof, error) {
+	if string(path) != string(l.suffix) {
+		return nil, ErrKeyNotExist
+	}
+	leafPath := keyToPath(l.key)
+	var proofVal []byte
+	if string(path) == string(l.suffix) {
+		proofVal = append(proofVal, l.value...)
+	}
+	proof := newProof(
+		leafPath,
+		proofVal,
+	)
+	return proof, nil
+}
+
 func (l *Leaf) updateHash() {
 	tmpVal := []byte{}
 	head := hashHead(l.suffix)
