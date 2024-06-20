@@ -14,17 +14,15 @@
 
 package mpf
 
-import "fmt"
-
-type ChildNode interface {
-	isChildNode()
-	Hash() Hash
-}
+import (
+	"fmt"
+	"strings"
+)
 
 type Branch struct {
 	hash     Hash
 	prefix   []Nibble
-	children [16]ChildNode
+	children [16]Node
 	size     int
 }
 
@@ -36,7 +34,28 @@ func newBranch(prefix []Nibble) *Branch {
 	return b
 }
 
-func (b Branch) isChildNode() {}
+func (b Branch) isNode() {}
+
+func (b *Branch) String() string {
+	ret := fmt.Sprintf(
+		"%s #%s",
+		nibblesToHexString(b.prefix),
+		b.hash.String()[:10],
+	)
+	for idx, child := range b.children {
+		if child == nil {
+			continue
+		}
+		childStr := child.String()
+		childStr = strings.ReplaceAll(childStr, "\n", "\n  ")
+		ret += fmt.Sprintf(
+			"\n - %x%s",
+			idx,
+			childStr,
+		)
+	}
+	return ret
+}
 
 func (b *Branch) Hash() Hash {
 	return b.hash
@@ -55,89 +74,151 @@ func (b *Branch) updateHash() {
 	b.hash = HashValue(tmpVal)
 }
 
-func (b *Branch) get(key []Nibble) ([]byte, error) {
-	childIdx := int(key[0])
+func (b *Branch) get(path []Nibble) ([]byte, error) {
+	// Determine path minus the current node prefix
+	pathMinusPrefix := path[len(b.prefix):]
+	// Determine which child slot the next nibble in the path fits in
+	childIdx := int(pathMinusPrefix[0])
+	// Determine sub-path for key. We strip off the first nibble, since it's implied by
+	// the child slot that it's in
+	subPath := pathMinusPrefix[1:]
 	if b.children[childIdx] == nil {
 		return nil, ErrKeyNotExist
 	}
 	existingChild := b.children[childIdx]
 	switch v := existingChild.(type) {
 	case *Leaf:
-		if string(key[1:]) == string(v.suffix) {
+		if string(subPath) == string(v.suffix) {
 			return v.value, nil
 		}
 		return nil, ErrKeyNotExist
 	case *Branch:
-		return v.get(key[1:])
+		return v.get(subPath)
 	default:
 		panic(
 			fmt.Sprintf(
-				"unknown ChildNode type %T...this should never happen",
+				"unknown Node type %T...this should never happen",
 				existingChild,
 			),
 		)
 	}
 }
 
-func (b *Branch) insert(key []Nibble, val []byte) {
-	childIdx := int(key[0])
+func (b *Branch) insert(path []Nibble, key []byte, val []byte) {
+	// Determine path minus the current node prefix
+	pathMinusPrefix := path[len(b.prefix):]
+	// Determine which child slot the next nibble in the path fits in
+	childIdx := int(pathMinusPrefix[0])
+	// Determine sub-path for key. We strip off the first nibble, since it's implied by
+	// the child slot that it's in
+	subPath := pathMinusPrefix[1:]
+	// Create leaf node and add to appropriate slot if there's not already a node there
 	if b.children[childIdx] == nil {
-		b.children[childIdx] = newLeaf(
-			key[1:],
+		b.addChild(
+			childIdx,
+			newLeaf(
+				subPath,
+				key,
+				val,
+			),
+		)
+		return
+	}
+	existingChild := b.children[childIdx]
+	switch v := existingChild.(type) {
+	// Existing child node is a leaf. We'll need to replace it with a branch with both
+	// the original leaf node and the new leaf node
+	case *Leaf:
+		// Determine the common prefix nibbles between existing leaf and new leaf node
+		tmpPrefix := commonPrefix(subPath, v.suffix)
+		// Update value for existing key
+		if string(tmpPrefix) == string(v.suffix) {
+			v.Set(val)
+			b.updateHash()
+			return
+		}
+		// Create a new branch node with the common prefix
+		tmpBranch := newBranch(tmpPrefix)
+		// Add original leaf node values to new branch
+		tmpBranch.insert(
+			v.suffix,
+			v.key,
+			v.value,
+		)
+		// Insert new value to new branch
+		tmpBranch.insert(
+			subPath,
+			key,
 			val,
 		)
-		b.size++
+		// Replace existing leaf node with new branch node
+		b.children[childIdx] = tmpBranch
 		b.updateHash()
-	} else {
-		existingChild := b.children[childIdx]
-		switch v := existingChild.(type) {
-		case *Leaf:
-			tmpPrefix := commonPrefix(key[1:], v.suffix)
-			tmpBranch := newBranch(tmpPrefix)
-			// Add original leaf node to new branch
-			tmpBranch.children[childIdx] = v
-			tmpBranch.size++
-			// Insert new value to new branch
-			tmpBranch.insert(
-				key[1:],
-				val,
-			)
-			// Replace existing leaf node with new branch node
-			b.children[childIdx] = tmpBranch
-		case *Branch:
+
+	case *Branch:
+		// Determine the common prefix nibbles between existing branch and new leaf node
+		tmpPrefix := commonPrefix(subPath, v.prefix)
+		// Check for common prefix matching branch prefix
+		if string(tmpPrefix) == string(v.prefix) {
+			// Insert new value in existing branch
 			v.insert(
-				key[1:],
+				subPath,
+				key,
 				val,
 			)
-		default:
-			panic(
-				fmt.Sprintf(
-					"unknown ChildNode type %T...this should never happen",
-					existingChild,
-				),
-			)
+			b.updateHash()
+			return
 		}
-		b.size++
+		// Create a new branch node with the common prefix
+		tmpBranch := newBranch(tmpPrefix)
+		// Adjust existing branch prefix and add to new branch
+		newOrigBranchPrefix := v.prefix[len(tmpPrefix):]
+		v.prefix = newOrigBranchPrefix[1:]
+		v.updateHash()
+		tmpBranch.addChild(int(newOrigBranchPrefix[0]), v)
+		// Insert new value in new branch
+		tmpBranch.insert(
+			subPath,
+			key,
+			val,
+		)
+		// Replace existing branch node with new branch node
+		b.children[childIdx] = tmpBranch
 		b.updateHash()
+
+	default:
+		panic(
+			fmt.Sprintf(
+				"unknown Node type %T...this should never happen",
+				existingChild,
+			),
+		)
 	}
 }
 
-func (b *Branch) delete(key []Nibble) error {
-	childIdx := int(key[0])
+func (b *Branch) delete(path []Nibble) error {
+	// Determine path minus the current node prefix
+	pathMinusPrefix := path[len(b.prefix):]
+	// Determine which child slot the next nibble in the path fits in
+	childIdx := int(pathMinusPrefix[0])
+	// Determine sub-path for key. We strip off the first nibble, since it's implied by
+	// the child slot that it's in
+	subPath := pathMinusPrefix[1:]
 	if b.children[childIdx] == nil {
 		return ErrKeyNotExist
 	}
 	existingChild := b.children[childIdx]
 	switch v := existingChild.(type) {
 	case *Leaf:
-		if string(v.suffix) != string(key[1:]) {
+		if string(v.suffix) != string(subPath) {
 			return ErrKeyNotExist
 		}
 		b.children[childIdx] = nil
+		b.size--
 		b.updateHash()
 	case *Branch:
 		err := v.delete(
-			key[1:],
+			subPath,
 		)
 		if err != nil {
 			return err
@@ -145,14 +226,22 @@ func (b *Branch) delete(key []Nibble) error {
 		// Merge branch with only one child
 		if v.size == 1 {
 			// Find non-nil child entry
-			for _, tmpChild := range v.children {
+			for tmpChildIdx, tmpChild := range v.children {
 				if tmpChild != nil {
-					// Prepend branch prefix to child prefix
+					// Update child node suffix to include branch prefix and implied nibble from child slot
 					switch v2 := tmpChild.(type) {
 					case *Leaf:
-						v2.suffix = append(v.prefix, v2.suffix...)
+						newSuffix := append([]Nibble(nil), v.prefix...)
+						newSuffix = append(newSuffix, Nibble(tmpChildIdx))
+						newSuffix = append(newSuffix, v2.suffix...)
+						v2.suffix = newSuffix
+						v2.updateHash()
 					case *Branch:
-						v2.prefix = append(v.prefix, v2.prefix...)
+						newPrefix := append([]Nibble(nil), v.prefix...)
+						newPrefix = append(newPrefix, Nibble(tmpChildIdx))
+						newPrefix = append(newPrefix, v2.prefix...)
+						v2.prefix = newPrefix
+						v2.updateHash()
 					}
 					b.children[childIdx] = tmpChild
 					break
@@ -163,12 +252,11 @@ func (b *Branch) delete(key []Nibble) error {
 	default:
 		panic(
 			fmt.Sprintf(
-				"unknown ChildNode type %T...this should never happen",
+				"unknown Node type %T...this should never happen",
 				existingChild,
 			),
 		)
 	}
-	b.size--
 	return nil
 }
 
@@ -196,6 +284,29 @@ func (b *Branch) merkleRootChildren() Hash {
 		tmpHashes = newTmpHashes
 	}
 	return tmpHashes[0]
+}
+
+func (b *Branch) getChildren() []Node {
+	var ret []Node
+	for _, tmpChild := range b.children {
+		if tmpChild != nil {
+			ret = append(ret, tmpChild)
+		}
+	}
+	return ret
+}
+
+func (b *Branch) addChild(slot int, child Node) {
+	empty := true
+	if b.children[slot] != nil {
+		empty = false
+	}
+	b.children[slot] = child
+	// Increment the child node count
+	if empty {
+		b.size++
+	}
+	b.updateHash()
 }
 
 func commonPrefix(prefixA []Nibble, prefixB []Nibble) []Nibble {

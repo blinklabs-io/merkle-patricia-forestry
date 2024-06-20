@@ -16,32 +16,51 @@ package mpf
 
 import "testing"
 
-func TestLeafPrefixEven(t *testing.T) {
-	testPrefix := []Nibble{0xa, 0xb}
-	testValue := []byte{0x0, 0x1, 0xe, 0xf}
-	// TODO: verify this is actually the expected value. this was pulled from the code output
-	expectedHashHex := "349a800c2b1cf864e03adf4e2c6004a8c7d40e0572700424ac9543695d407f18"
-	l := newLeaf(
-		testPrefix,
-		testValue,
-	)
-	leafHashHex := l.Hash().String()
-	if leafHashHex != expectedHashHex {
-		t.Errorf("did not get expected hash: got %s, expected %s", leafHashHex, expectedHashHex)
+func TestLeafExpectedHash(t *testing.T) {
+	testDefs := []struct {
+		prefix       []Nibble
+		key          []byte
+		value        []byte
+		expectedHash string
+	}{
+		// Prefix with even length
+		{
+			prefix: bytesToNibbles(
+				HashValue([]byte{0xab}).Bytes(),
+			),
+			key:          []byte{0xab},
+			value:        []byte{0x0, 0x1, 0xe, 0xf},
+			expectedHash: "201e6c905db9d8ba1d107e3fbd1e9af545d7b0505b297f73b6f92fd5e4d9c235",
+		},
+		// Prefix with odd length
+		{
+			prefix: bytesToNibbles(
+				HashValue([]byte{0xab}).Bytes(),
+			)[1:],
+			key:          []byte{0xab},
+			value:        []byte{0x0, 0x1, 0xe, 0xf},
+			expectedHash: "87899327d3cef386073418f94e188ce6cbd410fa9312d7ca790a1dbc34368c36",
+		},
+		// Hashed key as prefix
+		// This hash is validated against the original JS implementation
+		{
+			prefix: bytesToNibbles(
+				HashValue([]byte{0xab, 0xcd}).Bytes(),
+			),
+			key:          []byte{0xab, 0xcd},
+			value:        []byte{0x12, 0x34},
+			expectedHash: "1887f50447e27c729c781598745de46ed35c8f5a68cec25b68e6178a2cfc8e96",
+		},
 	}
-}
-
-func TestLeafPrefixOdd(t *testing.T) {
-	testPrefix := []Nibble{0xa, 0xb, 0xc}
-	testValue := []byte{0x0, 0x1, 0xe, 0xf}
-	// TODO: verify this is actually the expected value. this was pulled from the code output
-	expectedHashHex := "5cef0f2da340f3856c3a54d12d8ffdedaf7c97dc49634edec4f6c8638ae0d0f8"
-	l := newLeaf(
-		testPrefix,
-		testValue,
-	)
-	leafHashHex := l.Hash().String()
-	if leafHashHex != expectedHashHex {
-		t.Errorf("did not get expected hash: got %s, expected %s", leafHashHex, expectedHashHex)
+	for _, testDef := range testDefs {
+		l := newLeaf(
+			testDef.prefix,
+			testDef.key,
+			testDef.value,
+		)
+		leafHash := l.Hash().String()
+		if leafHash != testDef.expectedHash {
+			t.Errorf("did not got expected hash: got %s, expected %s", leafHash, testDef.expectedHash)
+		}
 	}
 }
