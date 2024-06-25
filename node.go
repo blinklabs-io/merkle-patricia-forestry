@@ -18,4 +18,31 @@ type Node interface {
 	isNode()
 	Hash() Hash
 	String() string
+	generateProof([]Nibble) (*Proof, error)
+}
+
+func merkleRoot(nodes []Node) Hash {
+	// Gather child node hashes
+	tmpHashes := make([]Hash, 0, len(nodes))
+	for _, child := range nodes {
+		tmpHash := NullHash
+		if child != nil {
+			tmpHash = child.Hash()
+		}
+		tmpHashes = append(tmpHashes, tmpHash)
+	}
+	// Concat and hash child hashes in pairs, repeating until only a single hash remains
+	for len(tmpHashes) > 1 {
+		newTmpHashes := make([]Hash, 0, len(tmpHashes)/2)
+		for i := 0; i < len(tmpHashes); i = i + 2 {
+			tmpVal := append(
+				tmpHashes[i].Bytes(),
+				tmpHashes[i+1].Bytes()...,
+			)
+			tmpHash := HashValue(tmpVal)
+			newTmpHashes = append(newTmpHashes, tmpHash)
+		}
+		tmpHashes = newTmpHashes
+	}
+	return tmpHashes[0]
 }

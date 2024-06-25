@@ -68,7 +68,7 @@ func (b *Branch) updateHash() {
 		tmpVal = append(tmpVal, byte(nibble))
 	}
 	// Calculate merkle root for children and append
-	childrenHash := b.merkleRootChildren()
+	childrenHash := merkleRoot(b.children[:])
 	tmpVal = append(tmpVal, childrenHash.Bytes()...)
 	// Calculate hash
 	b.hash = HashValue(tmpVal)
@@ -260,30 +260,24 @@ func (b *Branch) delete(path []Nibble) error {
 	return nil
 }
 
-func (b *Branch) merkleRootChildren() Hash {
-	// Gather child node hashes
-	tmpHashes := make([]Hash, 0, len(b.children))
-	for _, child := range b.children {
-		tmpHash := NullHash
-		if child != nil {
-			tmpHash = child.Hash()
-		}
-		tmpHashes = append(tmpHashes, tmpHash)
+func (b *Branch) generateProof(path []Nibble) (*Proof, error) {
+	// Determine path minus the current node prefix
+	pathMinusPrefix := path[len(b.prefix):]
+	// Determine which child slot the next nibble in the path fits in
+	childIdx := int(pathMinusPrefix[0])
+	// Determine sub-path for key. We strip off the first nibble, since it's implied by
+	// the child slot that it's in
+	subPath := pathMinusPrefix[1:]
+	if b.children[childIdx] == nil {
+		return nil, ErrKeyNotExist
 	}
-	// Concat and hash child hashes in pairs, repeating until only a single hash remains
-	for len(tmpHashes) > 1 {
-		newTmpHashes := make([]Hash, 0, len(tmpHashes)/2)
-		for i := 0; i < len(tmpHashes); i = i + 2 {
-			tmpVal := append(
-				tmpHashes[i].Bytes(),
-				tmpHashes[i+1].Bytes()...,
-			)
-			tmpHash := HashValue(tmpVal)
-			newTmpHashes = append(newTmpHashes, tmpHash)
-		}
-		tmpHashes = newTmpHashes
+	existingChild := b.children[childIdx]
+	proof, err := existingChild.generateProof(subPath)
+	if err != nil {
+		return nil, err
 	}
-	return tmpHashes[0]
+	proof.Rewind(childIdx, len(b.prefix), b.children[:])
+	return proof, nil
 }
 
 func (b *Branch) getChildren() []Node {

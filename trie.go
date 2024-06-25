@@ -64,11 +64,10 @@ func (t *Trie) Hash() Hash {
 
 // Set adds the specified key and value to the trie. If the key already exists, the value will be updated
 func (t *Trie) Set(key []byte, val []byte) {
-	keyHash := HashValue(key)
-	keyHashNibbles := bytesToNibbles(keyHash.Bytes())
+	path := keyToPath(key)
 	if t.rootNode == nil {
 		l := newLeaf(
-			keyHashNibbles,
+			path,
 			key,
 			val,
 		)
@@ -78,7 +77,7 @@ func (t *Trie) Set(key []byte, val []byte) {
 	switch n := t.rootNode.(type) {
 	case *Leaf:
 		// Update value for matching existing leaf node
-		if string(keyHashNibbles) == string(n.suffix) {
+		if string(path) == string(n.suffix) {
 			n.Set(val)
 			return
 		}
@@ -87,11 +86,11 @@ func (t *Trie) Set(key []byte, val []byte) {
 		// Insert original value
 		tmpBranch.insert(n.suffix, n.key, n.value)
 		// Insert new value
-		tmpBranch.insert(keyHashNibbles, key, val)
+		tmpBranch.insert(path, key, val)
 		// Replace root node
 		t.rootNode = tmpBranch
 	case *Branch:
-		n.insert(keyHashNibbles, key, val)
+		n.insert(path, key, val)
 	default:
 		panic("unknown node type...this should never happen")
 	}
@@ -103,27 +102,25 @@ func (t *Trie) Delete(key []byte) error {
 	if t.rootNode == nil {
 		return ErrKeyNotExist
 	}
-	keyHash := HashValue(key)
-	keyHashNibbles := bytesToNibbles(keyHash.Bytes())
+	path := keyToPath(key)
 	switch n := t.rootNode.(type) {
 	case *Leaf:
-		if string(keyHashNibbles) == string(n.suffix) {
+		if string(path) == string(n.suffix) {
 			t.rootNode = nil
 			return nil
 		}
 		return ErrKeyNotExist
 	case *Branch:
-		if err := n.delete(keyHashNibbles); err != nil {
+		if err := n.delete(path); err != nil {
 			return err
 		}
 		// Move single remaining child node to root node
 		if n.size == 1 {
 			tmpChildren := n.getChildren()
 			tmpChild := tmpChildren[0].(*Leaf)
-			childKeyHash := HashValue(tmpChild.key)
-			childKeyHashNibbles := bytesToNibbles(childKeyHash.Bytes())
+			childPath := keyToPath(tmpChild.key)
 			newNode := newLeaf(
-				childKeyHashNibbles,
+				childPath,
 				tmpChild.key,
 				tmpChild.value,
 			)
@@ -141,16 +138,15 @@ func (t *Trie) Get(key []byte) ([]byte, error) {
 	if t.rootNode == nil {
 		return nil, ErrKeyNotExist
 	}
-	keyHash := HashValue(key)
-	keyHashNibbles := bytesToNibbles(keyHash.Bytes())
+	path := keyToPath(key)
 	switch n := t.rootNode.(type) {
 	case *Leaf:
-		if string(n.suffix) == string(keyHashNibbles) {
+		if string(n.suffix) == string(path) {
 			return n.value, nil
 		}
 		return nil, ErrKeyNotExist
 	case *Branch:
-		return n.get(keyHashNibbles)
+		return n.get(path)
 	default:
 		panic("unknown node type...this should never happen")
 	}
@@ -160,4 +156,14 @@ func (t *Trie) Get(key []byte) ([]byte, error) {
 func (t *Trie) Has(key []byte) bool {
 	_, err := t.Get(key)
 	return err == nil
+}
+
+// Prove returns a proof that the given key exists in the trie or ErrKeyNotExist if
+// the key doesn't exist in the trie
+func (t *Trie) Prove(key []byte) (*Proof, error) {
+	if t.rootNode == nil {
+		return nil, ErrKeyNotExist
+	}
+	path := keyToPath(key)
+	return t.rootNode.generateProof(path)
 }
