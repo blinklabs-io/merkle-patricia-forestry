@@ -24,15 +24,34 @@ func TestNibbleByteToNibble(t *testing.T) {
 	expectedNibbles := []Nibble{0xa, 0xb}
 	nibbles := byteToNibbles(testByte)
 	if !reflect.DeepEqual(nibbles, expectedNibbles) {
-		t.Errorf("did not get expected nibbles: got %#v, expected %#v", nibbles, expectedNibbles)
+		t.Errorf(
+			"did not get expected nibbles: got %#v, expected %#v",
+			nibbles,
+			expectedNibbles,
+		)
 	}
 }
 
 func TestNibbleBytesToNibbles(t *testing.T) {
 	testBytes := []byte{0xab, 0xcd, 0xef, 0x00, 0x01}
-	expectedNibbles := []Nibble{0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x0, 0x0, 0x0, 0x1}
+	expectedNibbles := []Nibble{
+		0xa,
+		0xb,
+		0xc,
+		0xd,
+		0xe,
+		0xf,
+		0x0,
+		0x0,
+		0x0,
+		0x1,
+	}
 	nibbles := bytesToNibbles(testBytes)
 	if !reflect.DeepEqual(nibbles, expectedNibbles) {
-		t.Errorf("did not get expected nibbles: got %#v, expected %#v", nibbles, expectedNibbles)
+		t.Errorf(
+			"did not get expected nibbles: got %#v, expected %#v",
+			nibbles,
+			expectedNibbles,
+		)
 	}
 }
