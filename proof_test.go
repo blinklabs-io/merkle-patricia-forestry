@@ -63,11 +63,18 @@ func TestProofMarshalCbor(t *testing.T) {
 		}
 		proofCbor, err := cbor.Encode(proof)
 		if err != nil {
-			t.Fatalf("got unexpected error when encoding proof as CBOR: %s", err)
+			t.Fatalf(
+				"got unexpected error when encoding proof as CBOR: %s",
+				err,
+			)
 		}
 		cborHex := hex.EncodeToString(proofCbor)
 		if cborHex != testDef.expectedCborHex {
-			t.Fatalf("did not get expected proof CBOR\n  got:    %s\n  wanted: %s", cborHex, testDef.expectedCborHex)
+			t.Fatalf(
+				"did not get expected proof CBOR\n  got:    %s\n  wanted: %s",
+				cborHex,
+				testDef.expectedCborHex,
+			)
 		}
 	}
 }

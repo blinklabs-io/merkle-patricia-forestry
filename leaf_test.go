@@ -60,7 +60,11 @@ func TestLeafExpectedHash(t *testing.T) {
 		)
 		leafHash := l.Hash().String()
 		if leafHash != testDef.expectedHash {
-			t.Errorf("did not got expected hash: got %s, expected %s", leafHash, testDef.expectedHash)
+			t.Errorf(
+				"did not got expected hash: got %s, expected %s",
+				leafHash,
+				testDef.expectedHash,
+			)
 		}
 	}
 }

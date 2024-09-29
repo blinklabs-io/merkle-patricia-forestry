@@ -24,14 +24,14 @@ var fruitsTestEntries = []struct {
 	key   string
 	value string
 }{
-	{key: `apple[uid: 58]`, value: `🍎` },
-	{key: `apricot[uid: 0]`, value: `🤷` },
-	{key: `banana[uid: 218]`, value: `🍌` },
-	{key: `blueberry[uid: 0]`, value: `🫐` },
-	{key: `cherry[uid: 0]`, value: `🍒` },
-	{key: `coconut[uid: 0]`, value: `🥥` },
-	{key: `cranberry[uid: 0]`, value: `🤷` },
-	{key: `fig[uid: 68267]`, value: `🤷` },
+	{key: `apple[uid: 58]`, value: `🍎`},
+	{key: `apricot[uid: 0]`, value: `🤷`},
+	{key: `banana[uid: 218]`, value: `🍌`},
+	{key: `blueberry[uid: 0]`, value: `🫐`},
+	{key: `cherry[uid: 0]`, value: `🍒`},
+	{key: `coconut[uid: 0]`, value: `🥥`},
+	{key: `cranberry[uid: 0]`, value: `🤷`},
+	{key: `fig[uid: 68267]`, value: `🤷`},
 	{key: `grapefruit[uid: 0]`, value: `🤷`},
 	{key: `grapes[uid: 0]`, value: `🍇`},
 	{key: `guava[uid: 344]`, value: `🤷`},
@@ -45,24 +45,30 @@ var fruitsTestEntries = []struct {
 	{key: `passionfruit[uid: 0]`, value: `🤷`},
 	{key: `peach[uid: 0]`, value: `🍑`},
 	{key: `pear[uid: 0]`, value: `🍐`},
-	{key: `pineapple[uid: 12577]`, value: `🍍` },
-	{key: `plum[uid: 15492]`, value: `🤷` },
-	{key: `pomegranate[uid: 0]`, value: `🤷` },
-	{key: `raspberry[uid: 0]`, value: `🤷` },
-	{key: `strawberry[uid: 2532]`, value: `🍓` },
-	{key: `tangerine[uid: 11]`, value: `🍊` },
-	{key: `tomato[uid: 83468]`, value: `🍅` },
-	{key: `watermelon[uid: 0]`, value: `🍉` },
-	{key: `yuzu[uid: 0]`, value: `🤷` },
+	{key: `pineapple[uid: 12577]`, value: `🍍`},
+	{key: `plum[uid: 15492]`, value: `🤷`},
+	{key: `pomegranate[uid: 0]`, value: `🤷`},
+	{key: `raspberry[uid: 0]`, value: `🤷`},
+	{key: `strawberry[uid: 2532]`, value: `🍓`},
+	{key: `tangerine[uid: 11]`, value: `🍊`},
+	{key: `tomato[uid: 83468]`, value: `🍅`},
+	{key: `watermelon[uid: 0]`, value: `🍉`},
+	{key: `yuzu[uid: 0]`, value: `🤷`},
 }
 
 func TestTrieEmpty(t *testing.T) {
 	trie := NewTrie()
 	if trie.Hash() != NullHash {
-		t.Errorf("empty trie does not have expected hash: got %s, expected null hash", trie.Hash().String())
+		t.Errorf(
+			"empty trie does not have expected hash: got %s, expected null hash",
+			trie.Hash().String(),
+		)
 	}
 	if trie.size != 0 {
-		t.Errorf("empty trie does not have expected size: got %d, expected 0", trie.size)
+		t.Errorf(
+			"empty trie does not have expected size: got %d, expected 0",
+			trie.size,
+		)
 	}
 }
 
@@ -72,13 +78,21 @@ func TestTrieHashChanges(t *testing.T) {
 	trie.Set([]byte("abcd"), []byte("1"))
 	hash1 := trie.Hash().String()
 	if hash0 == hash1 {
-		t.Errorf("hash did not change after insert: old %s, new %s", hash0, hash1)
+		t.Errorf(
+			"hash did not change after insert: old %s, new %s",
+			hash0,
+			hash1,
+		)
 		return
 	}
 	trie.Set([]byte("bcde"), []byte("2"))
 	hash2 := trie.Hash().String()
 	if hash1 == hash2 {
-		t.Errorf("hash did not change after insert: old %s, new %s", hash1, hash2)
+		t.Errorf(
+			"hash did not change after insert: old %s, new %s",
+			hash1,
+			hash2,
+		)
 	}
 }
 
@@ -98,7 +112,11 @@ func TestTrieDelete(t *testing.T) {
 		return
 	}
 	if hash1 != hash3 {
-		t.Errorf("hash is different before and after set/delete of key: got %s, expected %s", hash3, hash1)
+		t.Errorf(
+			"hash is different before and after set/delete of key: got %s, expected %s",
+			hash3,
+			hash1,
+		)
 	}
 }
 
@@ -113,7 +131,11 @@ func TestTrieGet(t *testing.T) {
 		return
 	}
 	if string(tmpVal) != string(testVal) {
-		t.Errorf("did not get expected value for key: got %x, expected %x", tmpVal, testVal)
+		t.Errorf(
+			"did not get expected value for key: got %x, expected %x",
+			tmpVal,
+			testVal,
+		)
 	}
 }
 
@@ -136,12 +158,20 @@ func TestTrieSetTwice(t *testing.T) {
 	trie.Set([]byte{0xab, 0xcd}, []byte{0x01, 0x23})
 	hash1 := trie.Hash()
 	if hash1.String() != expectedRootHash {
-		t.Errorf("did not get expected root hash: got %s, expected %s", trie.Hash().String(), expectedRootHash)
+		t.Errorf(
+			"did not get expected root hash: got %s, expected %s",
+			trie.Hash().String(),
+			expectedRootHash,
+		)
 	}
 	trie.Set([]byte{0xab, 0xcd}, []byte{0x01, 0x23})
 	hash2 := trie.Hash()
 	if hash1 != hash2 {
-		t.Errorf("root hash changed when setting same value: got %s, expected %s", hash2, hash1)
+		t.Errorf(
+			"root hash changed when setting same value: got %s, expected %s",
+			hash2,
+			hash1,
+		)
 	}
 }
 
@@ -150,12 +180,20 @@ func TestTrieExpectedHash(t *testing.T) {
 	trie := NewTrie()
 	trie.Set([]byte{0xab, 0xcd}, []byte{0x01, 0x23})
 	if trie.Hash().String() != expectedRootHash1 {
-		t.Errorf("did not get expected root hash: got %s, expected %s", trie.Hash().String(), expectedRootHash1)
+		t.Errorf(
+			"did not get expected root hash: got %s, expected %s",
+			trie.Hash().String(),
+			expectedRootHash1,
+		)
 	}
 	expectedRootHash2 := "6eddba467ac9132f619b06f6bc8577ae4a3a7d64632fe4d7d24b0ad9e58769b4"
 	trie.Set([]byte{0xaa, 0xff}, []byte{0x45, 0x67})
 	if trie.Hash().String() != expectedRootHash2 {
-		t.Errorf("did not get expected root hash: got %s, expected %s", trie.Hash().String(), expectedRootHash2)
+		t.Errorf(
+			"did not get expected root hash: got %s, expected %s",
+			trie.Hash().String(),
+			expectedRootHash2,
+		)
 	}
 }
 
@@ -165,7 +203,11 @@ func TestTrieFruitsExpectedHash(t *testing.T) {
 		trie.Set([]byte(entry.key), []byte(entry.value))
 	}
 	if trie.Hash().String() != fruitsExpectedHash {
-		t.Errorf("did not get expected root hash: got %s, expected %s", trie.Hash().String(), fruitsExpectedHash)
+		t.Errorf(
+			"did not get expected root hash: got %s, expected %s",
+			trie.Hash().String(),
+			fruitsExpectedHash,
+		)
 	}
 }
 
@@ -180,7 +222,11 @@ func TestTrieFruitsGet(t *testing.T) {
 			t.Fatalf("unexpected error getting key: %s", err)
 		}
 		if string(tmpVal) != entry.value {
-			t.Fatalf("did not get expected value: got %x, expected %x", tmpVal, entry.value)
+			t.Fatalf(
+				"did not get expected value: got %x, expected %x",
+				tmpVal,
+				entry.value,
+			)
 		}
 	}
 }
@@ -198,7 +244,11 @@ func TestTrieFruitsSetDeleteConsistentHash(t *testing.T) {
 			t.Fatalf("unexpected error deleting key: %s", err)
 		}
 		if trie.Hash() != hashes[i] {
-			t.Fatalf("did not get expected hash: got %s, expected %s", trie.Hash().String(), hashes[i].String())
+			t.Fatalf(
+				"did not get expected hash: got %s, expected %s",
+				trie.Hash().String(),
+				hashes[i].String(),
+			)
 		}
 	}
 }
