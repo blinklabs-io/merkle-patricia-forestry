@@ -281,7 +281,7 @@ func (b *Branch) generateProof(path []Nibble) (*Proof, error) {
 }
 
 func (b *Branch) getChildren() []Node {
-	var ret []Node
+	ret := []Node{}
 	for _, tmpChild := range b.children {
 		if tmpChild != nil {
 			ret = append(ret, tmpChild)
