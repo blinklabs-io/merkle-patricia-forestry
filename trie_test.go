@@ -233,7 +233,7 @@ func TestTrieFruitsGet(t *testing.T) {
 
 func TestTrieFruitsSetDeleteConsistentHash(t *testing.T) {
 	trie := NewTrie()
-	var hashes []Hash
+	hashes := []Hash{}
 	for _, entry := range fruitsTestEntries {
 		hashes = append(hashes, trie.Hash())
 		trie.Set([]byte(entry.key), []byte(entry.value))
