@@ -36,11 +36,16 @@ func (t *Trie) String() string {
 	)
 	if t.rootNode != nil {
 		// Strip off first line of output for root node, since we're showing the root hash above
-		nodeStr := strings.SplitN(
+		nodeArr := strings.SplitN(
 			t.rootNode.String(),
 			"\n",
 			2,
-		)[1]
+		)
+		if nodeArr == nil {
+			// SplitN gave us nil, return original node from above
+			return ret
+		}
+		nodeStr := nodeArr[1]
 		ret += fmt.Sprintf(
 			"\n%s",
 			nodeStr,
