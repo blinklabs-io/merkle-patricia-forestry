@@ -1,4 +1,4 @@
-// Copyright 2024 Blink Labs Software
+// Copyright 2025 Blink Labs Software
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ func (b *Branch) Hash() Hash {
 }
 
 func (b *Branch) updateHash() {
-	var tmpVal []byte
+	tmpVal := []byte{}
 	// Append prefix
 	for _, nibble := range b.prefix {
 		tmpVal = append(tmpVal, byte(nibble))
