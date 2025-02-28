@@ -46,10 +46,7 @@ func (t *Trie) String() string {
 			return ret
 		}
 		nodeStr := nodeArr[1]
-		ret += fmt.Sprintf(
-			"\n%s",
-			nodeStr,
-		)
+		ret += "\n" + nodeStr
 	}
 	return ret
 }
