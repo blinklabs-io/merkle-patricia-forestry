@@ -1,4 +1,4 @@
-// Copyright 2024 Blink Labs Software
+// Copyright 2025 Blink Labs Software
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ func newProof(path []Nibble, value []byte) *Proof {
 }
 
 func (p *Proof) Rewind(targetIdx int, prefixLen int, neighbors []Node) {
-	var nonEmptyNeighbors []Node
+	nonEmptyNeighbors := []Node{}
 	var nonEmptyNeighborIdx int
 	for idx, neighbor := range neighbors {
 		if neighbor == nil {
