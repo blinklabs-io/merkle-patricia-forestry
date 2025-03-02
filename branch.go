@@ -34,7 +34,7 @@ func newBranch(prefix []Nibble) *Branch {
 	return b
 }
 
-func (b Branch) isNode() {}
+func (b *Branch) isNode() {}
 
 func (b *Branch) String() string {
 	ret := fmt.Sprintf(

@@ -1,4 +1,4 @@
-// Copyright 2024 Blink Labs Software
+// Copyright 2025 Blink Labs Software
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ func newLeaf(suffix []Nibble, key []byte, value []byte) *Leaf {
 	return l
 }
 
-func (l Leaf) isNode() {}
+func (l *Leaf) isNode() {}
 
 func (l *Leaf) String() string {
 	return fmt.Sprintf(
