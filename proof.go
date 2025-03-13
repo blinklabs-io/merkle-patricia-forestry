@@ -193,8 +193,8 @@ type ProofStepNeighbor struct {
 
 func merkleProof(nodes []Node, myIdx int) []Hash {
 	var ret []Hash
-	var pivot = 8
-	var n = 8
+	pivot := 8
+	n := 8
 	for n >= 1 {
 		if myIdx < pivot {
 			ret = append(
