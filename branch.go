@@ -291,10 +291,8 @@ func (b *Branch) getChildren() []Node {
 }
 
 func (b *Branch) addChild(slot int, child Node) {
-	empty := true
-	if b.children[slot] != nil {
-		empty = false
-	}
+	empty := b.children[slot] == nil
+
 	b.children[slot] = child
 	// Increment the child node count
 	if empty {
