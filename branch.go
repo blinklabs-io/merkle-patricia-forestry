@@ -16,6 +16,7 @@ package mpf
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -231,13 +232,13 @@ func (b *Branch) delete(path []Nibble) error {
 					// Update child node suffix to include branch prefix and implied nibble from child slot
 					switch v2 := tmpChild.(type) {
 					case *Leaf:
-						newSuffix := append([]Nibble(nil), v.prefix...)
+						newSuffix := slices.Clone(v.prefix)
 						newSuffix = append(newSuffix, Nibble(tmpChildIdx))
 						newSuffix = append(newSuffix, v2.suffix...)
 						v2.suffix = newSuffix
 						v2.updateHash()
 					case *Branch:
-						newPrefix := append([]Nibble(nil), v.prefix...)
+						newPrefix := slices.Clone(v.prefix)
 						newPrefix = append(newPrefix, Nibble(tmpChildIdx))
 						newPrefix = append(newPrefix, v2.prefix...)
 						v2.prefix = newPrefix
