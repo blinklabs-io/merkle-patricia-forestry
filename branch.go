@@ -303,9 +303,9 @@ func (b *Branch) addChild(slot int, child Node) {
 }
 
 func commonPrefix(prefixA []Nibble, prefixB []Nibble) []Nibble {
-	var ret []Nibble
+	ret := []Nibble{}
 	tmpLen := min(len(prefixB), len(prefixA))
-	for i := 0; i < tmpLen; i++ {
+	for i := range tmpLen {
 		if prefixA[i] != prefixB[i] {
 			break
 		}
