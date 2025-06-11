@@ -84,8 +84,9 @@ func (t *Trie) Set(key []byte, val []byte) {
 			n.Set(val)
 			return
 		}
+		tmpPrefix := commonPrefix(path, n.suffix)
 		// Create new branch
-		tmpBranch := newBranch(nil)
+		tmpBranch := newBranch(tmpPrefix)
 		// Insert original value
 		tmpBranch.insert(n.suffix, n.key, n.value)
 		// Insert new value
