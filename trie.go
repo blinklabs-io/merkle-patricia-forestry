@@ -94,7 +94,32 @@ func (t *Trie) Set(key []byte, val []byte) {
 		// Replace root node
 		t.rootNode = tmpBranch
 	case *Branch:
-		n.insert(path, key, val)
+		// Determine the common prefix nibbles between existing branch and new leaf node
+		tmpPrefix := commonPrefix(path, n.prefix)
+		// Check for common prefix matching branch prefix
+		if string(tmpPrefix) == string(n.prefix) {
+			// Insert new value in existing branch
+			n.insert(
+				path,
+				key,
+				val,
+			)
+			return
+		}
+		// Create a new branch node with the common prefix
+		tmpBranch := newBranch(tmpPrefix)
+		// Adjust existing branch prefix and add to new branch
+		newOrigBranchPrefix := n.prefix[len(tmpPrefix):]
+		n.prefix = newOrigBranchPrefix[1:]
+		n.updateHash()
+		tmpBranch.addChild(int(newOrigBranchPrefix[0]), n)
+		// Insert new value in new branch
+		tmpBranch.insert(
+			path,
+			key,
+			val,
+		)
+		t.rootNode = tmpBranch
 	default:
 		panic("unknown node type...this should never happen")
 	}
