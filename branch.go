@@ -76,33 +76,37 @@ func (b *Branch) updateHash() {
 }
 
 func (b *Branch) get(path []Nibble) ([]byte, error) {
-	// Determine path minus the current node prefix
-	pathMinusPrefix := path[len(b.prefix):]
-	// Determine which child slot the next nibble in the path fits in
-	childIdx := int(pathMinusPrefix[0])
-	// Determine sub-path for key. We strip off the first nibble, since it's implied by
-	// the child slot that it's in
-	subPath := pathMinusPrefix[1:]
-	if b.children[childIdx] == nil {
-		return nil, ErrKeyNotExist
-	}
-	existingChild := b.children[childIdx]
-	switch v := existingChild.(type) {
-	case *Leaf:
-		if string(subPath) == string(v.suffix) {
-			return v.value, nil
+	cmnPrefix := commonPrefix(path, b.prefix)
+	if string(cmnPrefix) == string(b.prefix) {
+		// Determine path minus the current node prefix
+		pathMinusPrefix := path[len(b.prefix):]
+		// Determine which child slot the next nibble in the path fits in
+		childIdx := int(pathMinusPrefix[0])
+		// Determine sub-path for key. We strip off the first nibble, since it's implied by
+		// the child slot that it's in
+		subPath := pathMinusPrefix[1:]
+		if b.children[childIdx] == nil {
+			return nil, ErrKeyNotExist
 		}
-		return nil, ErrKeyNotExist
-	case *Branch:
-		return v.get(subPath)
-	default:
-		panic(
-			fmt.Sprintf(
-				"unknown Node type %T...this should never happen",
-				existingChild,
-			),
-		)
+		existingChild := b.children[childIdx]
+		switch v := existingChild.(type) {
+		case *Leaf:
+			if string(subPath) == string(v.suffix) {
+				return v.value, nil
+			}
+			return nil, ErrKeyNotExist
+		case *Branch:
+			return v.get(subPath)
+		default:
+			panic(
+				fmt.Sprintf(
+					"unknown Node type %T...this should never happen",
+					existingChild,
+				),
+			)
+		}
 	}
+	return nil, ErrKeyNotExist
 }
 
 func (b *Branch) insert(path []Nibble, key []byte, val []byte) {
