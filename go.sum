@@ -1,7 +1,7 @@
-github.com/blinklabs-io/gouroboros v0.128.2 h1:U9XwvTaKxP7OWv2/TkZ5BvSvtsYcnKyCrbaO1hAq1/0=
-github.com/blinklabs-io/gouroboros v0.128.2/go.mod h1:LUGnvJ1iOmpCihNxT9fyZFf6KD5E45sV8ZqEUgljzDw=
-github.com/fxamacker/cbor/v2 v2.8.0 h1:fFtUGXUzXPHTIUdne5+zzMPTfffl3RD5qYnkY40vtxU=
-github.com/fxamacker/cbor/v2 v2.8.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
+github.com/blinklabs-io/gouroboros v0.129.0 h1:TqjRqtTlen7+2NEGjtNK2pHIRBid0ds9o1iOyeX64+w=
+github.com/blinklabs-io/gouroboros v0.129.0/go.mod h1:H8alqj9rvoaBb3NpAOoN771SGZPSlkToQ7JSlapJdVM=
+github.com/fxamacker/cbor/v2 v2.9.0 h1:NpKPmjDBgUfBms6tr6JZkTHtfFGcMKsw3eGcmD/sapM=
+github.com/fxamacker/cbor/v2 v2.9.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
 github.com/jinzhu/copier v0.4.0 h1:w3ciUoD19shMCRargcpm0cm91ytaBhDvuRpz1ODO/U8=
 github.com/jinzhu/copier v0.4.0/go.mod h1:DfbEm0FYsaqBcKcFuvmOZb218JkPGtvSHsKg8S8hyyg=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
