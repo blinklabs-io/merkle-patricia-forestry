@@ -143,17 +143,35 @@ func (t *Trie) Delete(key []byte) error {
 		if err := n.delete(path); err != nil {
 			return err
 		}
-		// Move single remaining child node to root node
+		// collapse root if it now has a single child:
+		// splice the vanished branch's prefix and the child slot nibble into that child.
 		if n.size == 1 {
-			tmpChildren := n.getChildren()
-			tmpChild := tmpChildren[0].(*Leaf)
-			childPath := keyToPath(tmpChild.key)
-			newNode := newLeaf(
-				childPath,
-				tmpChild.key,
-				tmpChild.value,
+			var (
+				onlyIdx   int
+				onlyChild Node
 			)
-			t.rootNode = newNode
+			for i, c := range n.children {
+				if c != nil {
+					onlyIdx, onlyChild = i, c
+					break
+				}
+			}
+			switch c := onlyChild.(type) {
+			case *Leaf:
+				// new suffix = n.prefix ++ [onlyIdx] ++ c.suffix
+				newSuffix := append(append(append([]Nibble{}, n.prefix...), Nibble(onlyIdx)), c.suffix...)
+				c.suffix = newSuffix
+				c.updateHash()
+				t.rootNode = c
+			case *Branch:
+				// new prefix = n.prefix ++ [onlyIdx] ++ c.prefix
+				newPrefix := append(append(append([]Nibble{}, n.prefix...), Nibble(onlyIdx)), c.prefix...)
+				c.prefix = newPrefix
+				c.updateHash()
+				t.rootNode = c
+			default:
+				panic("unknown node type...this should never happen")
+			}
 		}
 	default:
 		panic("unknown node type...this should never happen")
