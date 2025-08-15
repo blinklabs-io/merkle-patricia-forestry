@@ -16,6 +16,7 @@ package mpf
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -159,13 +160,13 @@ func (t *Trie) Delete(key []byte) error {
 			switch c := onlyChild.(type) {
 			case *Leaf:
 				// new suffix = n.prefix ++ [onlyIdx] ++ c.suffix
-				newSuffix := append(append(append([]Nibble{}, n.prefix...), Nibble(onlyIdx)), c.suffix...)
+				newSuffix := slices.Concat(n.prefix, []Nibble{Nibble(onlyIdx)}, c.suffix)
 				c.suffix = newSuffix
 				c.updateHash()
 				t.rootNode = c
 			case *Branch:
 				// new prefix = n.prefix ++ [onlyIdx] ++ c.prefix
-				newPrefix := append(append(append([]Nibble{}, n.prefix...), Nibble(onlyIdx)), c.prefix...)
+				newPrefix := slices.Concat(n.prefix, []Nibble{Nibble(onlyIdx)}, c.prefix)
 				c.prefix = newPrefix
 				c.updateHash()
 				t.rootNode = c
