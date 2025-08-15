@@ -285,16 +285,6 @@ func (b *Branch) generateProof(path []Nibble) (*Proof, error) {
 	return proof, nil
 }
 
-func (b *Branch) getChildren() []Node {
-	ret := []Node{}
-	for _, tmpChild := range b.children {
-		if tmpChild != nil {
-			ret = append(ret, tmpChild)
-		}
-	}
-	return ret
-}
-
 func (b *Branch) addChild(slot int, child Node) {
 	empty := b.children[slot] == nil
 
