@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.1
 
 require (
-	github.com/blinklabs-io/gouroboros v0.130.1
+	github.com/blinklabs-io/gouroboros v0.131.0
 	golang.org/x/crypto v0.41.0
 )
 
