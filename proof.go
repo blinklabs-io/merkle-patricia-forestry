@@ -131,82 +131,57 @@ type ProofStep struct {
 	neighbor     ProofStepNeighbor
 }
 
-func prependTag(tag byte, encodedValue []byte) []byte {
-	// d8 is the indicator for a 1-byte tag value
-	return append([]byte{0xd8, tag}, encodedValue...)
-}
-
 func (s *ProofStep) MarshalCBOR() ([]byte, error) {
-	var valueToTag any
-	var tagValue byte
-	var err error
-
 	switch s.stepType {
 	case ProofStepTypeBranch:
-		tagValue = 121 // 0x79
 		tmpNeighbors := []byte{}
 		for _, neighbor := range s.neighbors {
-			if neighbor == (Hash{}) {
-				tmpNeighbors = append(tmpNeighbors, NullHash[:]...)
-			} else {
-				tmpNeighbors = append(tmpNeighbors, neighbor.Bytes()...)
-			}
+			tmpNeighbors = append(tmpNeighbors, neighbor.Bytes()...)
 		}
-		if len(tmpNeighbors) != 128 {
-			return nil, fmt.Errorf("proof step branch: expected 128 bytes for neighbors, got %d", len(tmpNeighbors))
-		}
-		valueToTag = cbor.IndefLengthList{
-			uint64(s.prefixLength),
-			cbor.IndefLengthByteString{
-				tmpNeighbors[0:64],
-				tmpNeighbors[64:128],
+		tmpData := cbor.NewConstructor(
+			0,
+			cbor.IndefLengthList{
+				s.prefixLength,
+				cbor.IndefLengthByteString{
+					tmpNeighbors[0:64],
+					tmpNeighbors[64:],
+				},
 			},
-		}
+		)
+		return cbor.Encode(&tmpData)
 
 	case ProofStepTypeFork:
-		tagValue = 122
 		prefixBytes := nibblesToBytes(s.neighbor.prefix)
-
-		// The inner value (neighbor details) is ALSO tagged with 121
-		neighborData := cbor.IndefLengthList{
-			uint64(s.neighbor.nibble),
-			prefixBytes,
-			s.neighbor.root,
-		}
-		// encode inner list first
-		encodedNeighborData, err := cbor.Encode(&neighborData)
-		if err != nil {
-			return nil, fmt.Errorf("failed to encode fork neighbor data: %w", err)
-		}
-
-		taggedNeighborBytes := prependTag(121, encodedNeighborData)
-
-		// The value for the outer tag (122) is a list containing skip and the already-tagged neighbor bytes
-		// Use RawMessage to include the pre-tagged bytes without re-encoding
-		valueToTag = cbor.IndefLengthList{
-			uint64(s.prefixLength),
-			cbor.RawMessage(taggedNeighborBytes),
-		}
+		tmpData := cbor.NewConstructor(
+			1,
+			cbor.IndefLengthList{
+				s.prefixLength,
+				cbor.NewConstructor(
+					0,
+					cbor.IndefLengthList{
+						int(s.neighbor.nibble),
+						prefixBytes,
+						s.neighbor.root,
+					},
+				),
+			},
+		)
+		return cbor.Encode(&tmpData)
 
 	case ProofStepTypeLeaf:
-		tagValue = 123
-		keyBytes := nibblesToBytes(s.neighbor.key)
-		valueToTag = cbor.IndefLengthList{
-			uint64(s.prefixLength),
-			keyBytes,
-			s.neighbor.value,
-		}
+		tmpData := cbor.NewConstructor(
+			2,
+			cbor.IndefLengthList{
+				s.prefixLength,
+				nibblesToBytes(s.neighbor.key),
+				s.neighbor.value,
+			},
+		)
+		return cbor.Encode(&tmpData)
 
 	default:
 		return nil, errors.New("unknown proof step type")
 	}
-
-	encodedValue, err := cbor.Encode(&valueToTag)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode proof step value for tag %d: %w", tagValue, err)
-	}
-
-	return prependTag(tagValue, encodedValue), nil
 }
 
 type ProofStepNeighbor struct {
