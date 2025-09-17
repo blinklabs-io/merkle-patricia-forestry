@@ -51,6 +51,7 @@ var proofTestDefs = []struct {
 	},
 }
 
+var stakeKey string = "69cf032f5fd099507286619b82a25c9ae2d6d3bd1d8228a2511c19d9"
 var bigTrieExpectedHash string = "4e53ec142babca931a8ddf3b42ec1be549bf59dafac4cf8fbf8f903ebf6d1fce"
 var bigTrieProofExpectedCborHex string = "9fd8799f005f58404749f250f10ee5c1e5691ef4bf4182fd210d622095c3dfc09cfb9c0e88dbaa784bc3b617df0ca00a10a2dccc8320e6fd2cedc0863b83cc7caa6a01ab93aa0a245840a31b830ed1816367c161e6a16d550dd6bca347683c5993bd840fc19fd832730a10a39365ea7e8681e8d0f6c7a7f3efd21fb67fa1673099d3102ed77864813d72ffffd8799f005f58403a8ca472b15ea6d80ab74bd65f55aff450ecd833e1af933e1b13fa3770ba20ec2e9d6e02d5f549e866d84823400cb6602bcac181cca3f5faed7d98c6aae268945840b6563d399d634047047d372678e32e81782e41e881196722fa8925ed9feb8fa1a720a415401667e2a06f516d84f79ced82f102d0f6d967140cd6a72a2728f002ffffd87a9f00d8799f0b405820d07c1b6bcec5cc05ba76413b7c12544eb0b213564fa16e569033d37af3093c3affffff"
 var bigTrieEntries = []struct {
@@ -1121,7 +1122,6 @@ func TestBigTrieProofMarshalCbor(t *testing.T) {
 		t.Fatalf("got unexpected root hash\n  got:    %s\n  wanted: %s", root, bigTrieExpectedHash)
 	}
 
-	stakeKey := "69cf032f5fd099507286619b82a25c9ae2d6d3bd1d8228a2511c19d9"
 	stakeKeyBytes, err := hex.DecodeString(stakeKey)
 	if err != nil {
 		t.Fatalf("Error decoding stake key %s: %v", stakeKey, err)
