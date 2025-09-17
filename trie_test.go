@@ -176,24 +176,91 @@ func TestTrieSetTwice(t *testing.T) {
 }
 
 func TestTrieExpectedHash(t *testing.T) {
-	expectedRootHash1 := "eb258590dda64098b24091629f9dbcaf7e6e55011f9a411deb9e5a9793f0d83f"
-	trie := NewTrie()
-	trie.Set([]byte{0xab, 0xcd}, []byte{0x01, 0x23})
-	if trie.Hash().String() != expectedRootHash1 {
-		t.Errorf(
-			"did not get expected root hash: got %s, expected %s",
-			trie.Hash().String(),
-			expectedRootHash1,
-		)
+	type testDefValue struct {
+		key              []byte
+		value            []byte
+		expectedRootHash string
 	}
-	expectedRootHash2 := "6eddba467ac9132f619b06f6bc8577ae4a3a7d64632fe4d7d24b0ad9e58769b4"
-	trie.Set([]byte{0xaa, 0xff}, []byte{0x45, 0x67})
-	if trie.Hash().String() != expectedRootHash2 {
-		t.Errorf(
-			"did not get expected root hash: got %s, expected %s",
-			trie.Hash().String(),
-			expectedRootHash2,
-		)
+	testDefs := []struct {
+		values           []testDefValue
+		expectedRootHash string
+	}{
+		{
+			values: []testDefValue{
+				{
+					key:              []byte{0xab, 0xcd},
+					value:            []byte{0x01, 0x23},
+					expectedRootHash: "eb258590dda64098b24091629f9dbcaf7e6e55011f9a411deb9e5a9793f0d83f",
+				},
+				{
+					key:              []byte{0xaa, 0xff},
+					value:            []byte{0x45, 0x67},
+					expectedRootHash: "6eddba467ac9132f619b06f6bc8577ae4a3a7d64632fe4d7d24b0ad9e58769b4",
+				},
+			},
+		},
+		// From https://github.com/blinklabs-io/merkle-patricia-forestry/issues/93
+		// TODO: uncomment when we can pass this
+		/*
+			{
+				expectedRootHash: "01b252f957e3138467c540ba230723c16b32d2bfe7f33dd54e8a7ab5d7ca02e9",
+				values: []testDefValue{
+					{
+						key:   []byte(`81`),
+						value: []byte(`1`),
+					},
+					{
+						key:   []byte(`189`),
+						value: []byte(`2`),
+					},
+				},
+			},
+		*/
+		// From https://github.com/blinklabs-io/merkle-patricia-forestry/issues/96
+		{
+			expectedRootHash: "48b5cbcfa858fd9e8b49b6041d1833f842f30c1fec654d42c640056db5ce5afb",
+			values: []testDefValue{
+				{
+					key:   []byte(`81`),
+					value: []byte(`11`),
+				},
+				{
+					key:   []byte(`189`),
+					value: []byte(`11`),
+				},
+				{
+					key:   []byte(`82`),
+					value: []byte(`11`),
+				},
+			},
+		},
+	}
+	for _, testDef := range testDefs {
+		trie := NewTrie()
+		for _, value := range testDef.values {
+			trie.Set(value.key, value.value)
+			if value.expectedRootHash == "" {
+				continue
+			}
+			if trie.Hash().String() != value.expectedRootHash {
+				t.Errorf(
+					"did not get expected root hash: got %s, expected %s",
+					trie.Hash().String(),
+					value.expectedRootHash,
+				)
+			}
+
+		}
+		if testDef.expectedRootHash == "" {
+			continue
+		}
+		if trie.Hash().String() != testDef.expectedRootHash {
+			t.Errorf(
+				"did not get expected root hash: got %s, expected %s",
+				trie.Hash().String(),
+				testDef.expectedRootHash,
+			)
+		}
 	}
 }
 

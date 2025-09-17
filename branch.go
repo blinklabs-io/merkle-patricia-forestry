@@ -16,6 +16,7 @@ package mpf
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -75,33 +76,37 @@ func (b *Branch) updateHash() {
 }
 
 func (b *Branch) get(path []Nibble) ([]byte, error) {
-	// Determine path minus the current node prefix
-	pathMinusPrefix := path[len(b.prefix):]
-	// Determine which child slot the next nibble in the path fits in
-	childIdx := int(pathMinusPrefix[0])
-	// Determine sub-path for key. We strip off the first nibble, since it's implied by
-	// the child slot that it's in
-	subPath := pathMinusPrefix[1:]
-	if b.children[childIdx] == nil {
-		return nil, ErrKeyNotExist
-	}
-	existingChild := b.children[childIdx]
-	switch v := existingChild.(type) {
-	case *Leaf:
-		if string(subPath) == string(v.suffix) {
-			return v.value, nil
+	cmnPrefix := commonPrefix(path, b.prefix)
+	if string(cmnPrefix) == string(b.prefix) {
+		// Determine path minus the current node prefix
+		pathMinusPrefix := path[len(b.prefix):]
+		// Determine which child slot the next nibble in the path fits in
+		childIdx := int(pathMinusPrefix[0])
+		// Determine sub-path for key. We strip off the first nibble, since it's implied by
+		// the child slot that it's in
+		subPath := pathMinusPrefix[1:]
+		if b.children[childIdx] == nil {
+			return nil, ErrKeyNotExist
 		}
-		return nil, ErrKeyNotExist
-	case *Branch:
-		return v.get(subPath)
-	default:
-		panic(
-			fmt.Sprintf(
-				"unknown Node type %T...this should never happen",
-				existingChild,
-			),
-		)
+		existingChild := b.children[childIdx]
+		switch v := existingChild.(type) {
+		case *Leaf:
+			if string(subPath) == string(v.suffix) {
+				return v.value, nil
+			}
+			return nil, ErrKeyNotExist
+		case *Branch:
+			return v.get(subPath)
+		default:
+			panic(
+				fmt.Sprintf(
+					"unknown Node type %T...this should never happen",
+					existingChild,
+				),
+			)
+		}
 	}
+	return nil, ErrKeyNotExist
 }
 
 func (b *Branch) insert(path []Nibble, key []byte, val []byte) {
@@ -231,13 +236,13 @@ func (b *Branch) delete(path []Nibble) error {
 					// Update child node suffix to include branch prefix and implied nibble from child slot
 					switch v2 := tmpChild.(type) {
 					case *Leaf:
-						newSuffix := append([]Nibble(nil), v.prefix...)
+						newSuffix := slices.Clone(v.prefix)
 						newSuffix = append(newSuffix, Nibble(tmpChildIdx))
 						newSuffix = append(newSuffix, v2.suffix...)
 						v2.suffix = newSuffix
 						v2.updateHash()
 					case *Branch:
-						newPrefix := append([]Nibble(nil), v.prefix...)
+						newPrefix := slices.Clone(v.prefix)
 						newPrefix = append(newPrefix, Nibble(tmpChildIdx))
 						newPrefix = append(newPrefix, v2.prefix...)
 						v2.prefix = newPrefix
@@ -280,16 +285,6 @@ func (b *Branch) generateProof(path []Nibble) (*Proof, error) {
 	return proof, nil
 }
 
-func (b *Branch) getChildren() []Node {
-	ret := []Node{}
-	for _, tmpChild := range b.children {
-		if tmpChild != nil {
-			ret = append(ret, tmpChild)
-		}
-	}
-	return ret
-}
-
 func (b *Branch) addChild(slot int, child Node) {
 	empty := b.children[slot] == nil
 
@@ -302,12 +297,9 @@ func (b *Branch) addChild(slot int, child Node) {
 }
 
 func commonPrefix(prefixA []Nibble, prefixB []Nibble) []Nibble {
-	var ret []Nibble
-	tmpLen := len(prefixA)
-	if len(prefixB) < tmpLen {
-		tmpLen = len(prefixB)
-	}
-	for i := 0; i < tmpLen; i++ {
+	ret := []Nibble{}
+	tmpLen := min(len(prefixB), len(prefixA))
+	for i := range tmpLen {
 		if prefixA[i] != prefixB[i] {
 			break
 		}
