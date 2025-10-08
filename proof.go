@@ -118,7 +118,7 @@ func (p *Proof) Rewind(targetIdx int, prefixLen int, neighbors []Node) {
 func (p *Proof) MarshalCBOR() ([]byte, error) {
 	tmpSteps := make([]any, 0, len(p.steps))
 	for _, step := range p.steps {
-		tmpSteps = append(tmpSteps, step)
+		tmpSteps = append(tmpSteps, &step)
 	}
 	tmpData := cbor.IndefLengthList(tmpSteps)
 	return cbor.Encode(&tmpData)
@@ -151,6 +151,7 @@ func (s *ProofStep) MarshalCBOR() ([]byte, error) {
 		return cbor.Encode(&tmpData)
 
 	case ProofStepTypeFork:
+		prefixBytes := nibblesToBytes(s.neighbor.prefix)
 		tmpData := cbor.NewConstructor(
 			1,
 			cbor.IndefLengthList{
@@ -159,7 +160,7 @@ func (s *ProofStep) MarshalCBOR() ([]byte, error) {
 					0,
 					cbor.IndefLengthList{
 						int(s.neighbor.nibble),
-						s.neighbor.prefix,
+						prefixBytes,
 						s.neighbor.root,
 					},
 				),
