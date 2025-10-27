@@ -326,6 +326,9 @@ type ProofStepNeighbor struct {
 func toInt(value any) (int, error) {
 	switch v := value.(type) {
 	case int:
+		if v < 0 {
+			return 0, fmt.Errorf("negative value: %d", v)
+		}
 		return v, nil
 	case uint:
 		if uint64(v) > uint64(math.MaxInt) {
