@@ -17,6 +17,7 @@ package mpf
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -38,24 +39,22 @@ func newBranch(prefix []Nibble) *Branch {
 func (b *Branch) isNode() {}
 
 func (b *Branch) String() string {
-	ret := fmt.Sprintf(
-		"%s #%s",
-		nibblesToHexString(b.prefix),
-		b.hash.String()[:10],
-	)
+	var sb strings.Builder
+	sb.WriteString(nibblesToHexString(b.prefix))
+	sb.WriteByte(' ')
+	sb.WriteByte('#')
+	sb.WriteString(b.hash.String()[:10])
 	for idx, child := range b.children {
 		if child == nil {
 			continue
 		}
 		childStr := child.String()
 		childStr = strings.ReplaceAll(childStr, "\n", "\n  ")
-		ret += fmt.Sprintf(
-			"\n - %x%s",
-			idx,
-			childStr,
-		)
+		sb.WriteString("\n -")
+		sb.WriteString(strconv.FormatInt(int64(idx), 16))
+		sb.WriteString(childStr)
 	}
-	return ret
+	return sb.String()
 }
 
 func (b *Branch) Hash() Hash {
