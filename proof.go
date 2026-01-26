@@ -134,7 +134,7 @@ type ProofStep struct {
 func (s *ProofStep) MarshalCBOR() ([]byte, error) {
 	switch s.stepType {
 	case ProofStepTypeBranch:
-		tmpNeighbors := []byte{}
+		tmpNeighbors := make([]byte, 0, len(s.neighbors)*HashSize)
 		for _, neighbor := range s.neighbors {
 			tmpNeighbors = append(tmpNeighbors, neighbor.Bytes()...)
 		}
