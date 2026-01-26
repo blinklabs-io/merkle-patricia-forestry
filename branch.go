@@ -62,7 +62,7 @@ func (b *Branch) Hash() Hash {
 }
 
 func (b *Branch) updateHash() {
-	tmpVal := []byte{}
+	tmpVal := make([]byte, 0, len(b.prefix)+HashSize)
 	// Append prefix
 	for _, nibble := range b.prefix {
 		tmpVal = append(tmpVal, byte(nibble))

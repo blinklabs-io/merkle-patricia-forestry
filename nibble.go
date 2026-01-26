@@ -27,7 +27,7 @@ func (n Nibble) String() string {
 
 // bytesToNibbles splits a series of bytes into a series of nibbles
 func bytesToNibbles(data []byte) []Nibble {
-	ret := []Nibble{}
+	ret := make([]Nibble, 0, len(data)*2)
 	for _, dataByte := range data {
 		tmpNibbles := byteToNibbles(dataByte)
 		ret = append(ret, tmpNibbles...)

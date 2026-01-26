@@ -80,7 +80,7 @@ func (l *Leaf) generateProof(path []Nibble) (*Proof, error) {
 }
 
 func (l *Leaf) updateHash() {
-	tmpVal := []byte{}
+	tmpVal := make([]byte, 0, 2+(len(l.suffix)+1)/2+HashSize)
 	head := hashHead(l.suffix)
 	tmpVal = append(tmpVal, head...)
 	tail := hashTail(l.suffix)
