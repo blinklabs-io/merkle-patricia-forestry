@@ -138,7 +138,7 @@ func (s *ProofStep) MarshalCBOR() ([]byte, error) {
 		for _, neighbor := range s.neighbors {
 			tmpNeighbors = append(tmpNeighbors, neighbor.Bytes()...)
 		}
-		tmpData := cbor.NewConstructor(
+		tmpData := cbor.NewConstructorEncoder(
 			0,
 			cbor.IndefLengthList{
 				s.prefixLength,
@@ -148,15 +148,15 @@ func (s *ProofStep) MarshalCBOR() ([]byte, error) {
 				},
 			},
 		)
-		return cbor.Encode(&tmpData)
+		return cbor.Encode(tmpData)
 
 	case ProofStepTypeFork:
 		prefixBytes := nibblesToBytes(s.neighbor.prefix)
-		tmpData := cbor.NewConstructor(
+		tmpData := cbor.NewConstructorEncoder(
 			1,
 			cbor.IndefLengthList{
 				s.prefixLength,
-				cbor.NewConstructor(
+				cbor.NewConstructorEncoder(
 					0,
 					cbor.IndefLengthList{
 						int(s.neighbor.nibble),
@@ -166,10 +166,10 @@ func (s *ProofStep) MarshalCBOR() ([]byte, error) {
 				),
 			},
 		)
-		return cbor.Encode(&tmpData)
+		return cbor.Encode(tmpData)
 
 	case ProofStepTypeLeaf:
-		tmpData := cbor.NewConstructor(
+		tmpData := cbor.NewConstructorEncoder(
 			2,
 			cbor.IndefLengthList{
 				s.prefixLength,
@@ -177,7 +177,7 @@ func (s *ProofStep) MarshalCBOR() ([]byte, error) {
 				s.neighbor.value,
 			},
 		)
-		return cbor.Encode(&tmpData)
+		return cbor.Encode(tmpData)
 
 	default:
 		return nil, errors.New("unknown proof step type")
