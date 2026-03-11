@@ -15,7 +15,10 @@
 package mpf
 
 import (
+	"bytes"
 	"encoding/hex"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/blinklabs-io/gouroboros/cbor"
@@ -82,6 +85,208 @@ func TestProofMarshalCbor(t *testing.T) {
 				testDef.expectedCborHex,
 			)
 		}
+
+		var decoded Proof
+		if err := decoded.UnmarshalCBOR(proofCbor); err != nil {
+			t.Fatalf("got unexpected error when decoding proof CBOR: %s", err)
+		}
+
+		roundTripBytes, err := decoded.MarshalCBOR()
+		if err != nil {
+			t.Fatalf("got unexpected error when re-marshaling proof: %s", err)
+		}
+
+		if !bytes.Equal(roundTripBytes, proofCbor) {
+			t.Fatalf("round-trip proof CBOR mismatch")
+		}
+
+		assertProofStepsEqual(t, &decoded, proof)
+	}
+}
+
+func TestProofUnmarshalForkNeighborOddPrefixBytes(t *testing.T) {
+	oddPrefix := []Nibble{0x0, 0x1, 0x0, 0x2, 0x0, 0x3}
+	neighborRoot := HashValue([]byte("neighbor"))
+
+	proof := &Proof{
+		steps: []ProofStep{
+			{
+				stepType:     ProofStepTypeFork,
+				prefixLength: len(oddPrefix),
+				neighbor: ProofStepNeighbor{
+					prefix: oddPrefix,
+					nibble: 0x4,
+					root:   neighborRoot,
+				},
+			},
+		},
+	}
+
+	encoded, err := proof.MarshalCBOR()
+	if err != nil {
+		t.Fatalf("failed to marshal proof: %v", err)
+	}
+
+	var decoded Proof
+	if err := decoded.UnmarshalCBOR(encoded); err != nil {
+		t.Fatalf("failed to unmarshal proof: %v", err)
+	}
+
+	assertProofStepsEqual(t, &decoded, proof)
+}
+
+func TestProofForkOddNibbleCountPrefixRoundTrip(t *testing.T) {
+	testCases := []struct {
+		name   string
+		prefix []Nibble
+	}{
+		{
+			name:   "1 nibble",
+			prefix: []Nibble{0xa},
+		},
+		{
+			name:   "3 nibbles",
+			prefix: []Nibble{0xa, 0xb, 0xc},
+		},
+		{
+			name:   "5 nibbles",
+			prefix: []Nibble{0x1, 0x2, 0x3, 0x4, 0x5},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			neighborRoot := HashValue([]byte("neighbor"))
+			proof := &Proof{
+				steps: []ProofStep{
+					{
+						stepType:     ProofStepTypeFork,
+						prefixLength: 2,
+						neighbor: ProofStepNeighbor{
+							prefix: tc.prefix,
+							nibble: 0x7,
+							root:   neighborRoot,
+						},
+					},
+				},
+			}
+
+			encoded, err := proof.MarshalCBOR()
+			if err != nil {
+				t.Fatalf("failed to marshal proof: %v", err)
+			}
+
+			var decoded Proof
+			if err := decoded.UnmarshalCBOR(encoded); err != nil {
+				t.Fatalf("failed to unmarshal proof: %v", err)
+			}
+
+			assertProofStepsEqual(t, &decoded, proof)
+		})
+	}
+}
+
+func TestProofUnmarshalRejectsTrailingBytes(t *testing.T) {
+	proof := &Proof{
+		steps: []ProofStep{
+			{
+				stepType:     ProofStepTypeLeaf,
+				prefixLength: 0,
+				neighbor: ProofStepNeighbor{
+					key:   []Nibble{0x0, 0x1},
+					value: HashValue([]byte("value")),
+				},
+			},
+		},
+	}
+	encoded, err := proof.MarshalCBOR()
+	if err != nil {
+		t.Fatalf("failed to marshal proof: %v", err)
+	}
+	encoded = append(encoded, 0x00)
+
+	var decoded Proof
+	err = decoded.UnmarshalCBOR(encoded)
+	if err == nil {
+		t.Fatal("expected trailing byte error but got nil")
+	}
+	if !strings.Contains(err.Error(), "trailing data after proof") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestProofStepUnmarshalRejectsTrailingBytes(t *testing.T) {
+	step := ProofStep{
+		stepType:     ProofStepTypeLeaf,
+		prefixLength: 0,
+		neighbor: ProofStepNeighbor{
+			key:   []Nibble{0x0, 0x1},
+			value: HashValue([]byte("value")),
+		},
+	}
+	encoded, err := step.MarshalCBOR()
+	if err != nil {
+		t.Fatalf("failed to marshal step: %v", err)
+	}
+	encoded = append(encoded, 0x00)
+
+	var decoded ProofStep
+	err = decoded.UnmarshalCBOR(encoded)
+	if err == nil {
+		t.Fatal("expected trailing byte error but got nil")
+	}
+	if !strings.Contains(err.Error(), "trailing data after proof step") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestProofUnmarshalRejectsNegativePrefixLength(t *testing.T) {
+	tmpData := cbor.IndefLengthList{
+		cbor.NewConstructorEncoder(
+			2,
+			cbor.IndefLengthList{
+				-1,
+				[]byte{0x01, 0x23},
+				HashValue([]byte("value")),
+			},
+		),
+	}
+	encoded, err := cbor.Encode(&tmpData)
+	if err != nil {
+		t.Fatalf("failed to encode malformed proof: %v", err)
+	}
+
+	var decoded Proof
+	err = decoded.UnmarshalCBOR(encoded)
+	if err == nil {
+		t.Fatal("expected negative prefix error but got nil")
+	}
+	if !strings.Contains(err.Error(), "negative value") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestProofUnmarshalRejectsInvalidBranchNeighborLength(t *testing.T) {
+	tmpData := cbor.IndefLengthList{
+		cbor.NewConstructorEncoder(
+			0,
+			cbor.IndefLengthList{
+				0,
+				[]byte{0x01, 0x02, 0x03},
+			},
+		),
+	}
+	encoded, err := cbor.Encode(&tmpData)
+	if err != nil {
+		t.Fatalf("failed to encode malformed proof: %v", err)
+	}
+
+	var decoded Proof
+	err = decoded.UnmarshalCBOR(encoded)
+	if err == nil {
+		t.Fatal("expected branch neighbor length error but got nil")
+	}
+	if !strings.Contains(err.Error(), "incorrect branch neighbor data length") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
@@ -4196,5 +4401,85 @@ func TestBigTrieProofMarshalCbor(t *testing.T) {
 			proofCborHex,
 			bigTrieProofExpectedCborHex,
 		)
+	}
+}
+
+func assertProofStepsEqual(t *testing.T, got *Proof, want *Proof) {
+	t.Helper()
+	if len(got.steps) != len(want.steps) {
+		t.Fatalf(
+			"proof step count mismatch\n  got:    %d\n  wanted: %d",
+			len(got.steps),
+			len(want.steps),
+		)
+	}
+	for idx := range want.steps {
+		gotStep := got.steps[idx]
+		wantStep := want.steps[idx]
+		if gotStep.stepType != wantStep.stepType {
+			t.Fatalf(
+				"proof step %d type mismatch\n  got:    %s\n  wanted: %s",
+				idx,
+				gotStep.stepType,
+				wantStep.stepType,
+			)
+		}
+		if gotStep.prefixLength != wantStep.prefixLength {
+			t.Fatalf(
+				"proof step %d prefix length mismatch\n  got:    %d\n  wanted: %d",
+				idx,
+				gotStep.prefixLength,
+				wantStep.prefixLength,
+			)
+		}
+		switch wantStep.stepType {
+		case ProofStepTypeBranch:
+			if len(gotStep.neighbors) != len(wantStep.neighbors) {
+				t.Fatalf(
+					"proof step %d neighbor count mismatch\n  got:    %d\n  wanted: %d",
+					idx,
+					len(gotStep.neighbors),
+					len(wantStep.neighbors),
+				)
+			}
+			for neighborIdx := range wantStep.neighbors {
+				if gotStep.neighbors[neighborIdx] != wantStep.neighbors[neighborIdx] {
+					t.Fatalf(
+						"proof step %d neighbor hash mismatch at index %d",
+						idx,
+						neighborIdx,
+					)
+				}
+			}
+		case ProofStepTypeFork:
+			if gotStep.neighbor.nibble != wantStep.neighbor.nibble {
+				t.Fatalf(
+					"proof step %d neighbor nibble mismatch\n  got:    %d\n  wanted: %d",
+					idx,
+					gotStep.neighbor.nibble,
+					wantStep.neighbor.nibble,
+				)
+			}
+			if !slices.Equal(gotStep.neighbor.prefix, wantStep.neighbor.prefix) {
+				t.Fatalf("proof step %d neighbor prefix mismatch", idx)
+			}
+			if gotStep.neighbor.root != wantStep.neighbor.root {
+				t.Fatalf(
+					"proof step %d neighbor root mismatch\n  got:    %s\n  wanted: %s",
+					idx,
+					gotStep.neighbor.root,
+					wantStep.neighbor.root,
+				)
+			}
+		case ProofStepTypeLeaf:
+			if !slices.Equal(gotStep.neighbor.key, wantStep.neighbor.key) {
+				t.Fatalf("proof step %d neighbor key mismatch", idx)
+			}
+			if gotStep.neighbor.value != wantStep.neighbor.value {
+				t.Fatalf("proof step %d neighbor value mismatch", idx)
+			}
+		default:
+			t.Fatalf("proof step %d has unknown type: %d", idx, wantStep.stepType)
+		}
 	}
 }

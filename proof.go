@@ -124,11 +124,60 @@ func (p *Proof) MarshalCBOR() ([]byte, error) {
 	return cbor.Encode(&tmpData)
 }
 
+func (p *Proof) UnmarshalCBOR(data []byte) error {
+	*p = Proof{}
+	var tmpSteps []ProofStep
+	bytesRead, err := cbor.Decode(data, &tmpSteps)
+	if err != nil {
+		return err
+	}
+	if bytesRead != len(data) {
+		return fmt.Errorf(
+			"trailing data after proof: %d bytes",
+			len(data)-bytesRead,
+		)
+	}
+	p.steps = tmpSteps
+	return nil
+}
+
 type ProofStep struct {
 	stepType     ProofStepType
 	prefixLength int
 	neighbors    []Hash
 	neighbor     ProofStepNeighbor
+}
+
+func (s *ProofStep) UnmarshalCBOR(data []byte) error {
+	*s = ProofStep{}
+	var constructor cbor.ConstructorDecoder
+	bytesRead, err := cbor.Decode(data, &constructor)
+	if err != nil {
+		return err
+	}
+	if bytesRead != len(data) {
+		return fmt.Errorf(
+			"trailing data after proof step: %d bytes",
+			len(data)-bytesRead,
+		)
+	}
+	switch constructor.Tag() {
+	case 0:
+		if err := s.unmarshalBranchStep(constructor); err != nil {
+			return fmt.Errorf("decode branch proof step: %w", err)
+		}
+	case 1:
+		if err := s.unmarshalForkStep(constructor); err != nil {
+			return fmt.Errorf("decode fork proof step: %w", err)
+		}
+	case 2:
+		if err := s.unmarshalLeafStep(constructor); err != nil {
+			return fmt.Errorf("decode leaf proof step: %w", err)
+		}
+	default:
+		return fmt.Errorf("unknown proof step constructor: %d", constructor.Tag())
+	}
+	return nil
 }
 
 func (s *ProofStep) MarshalCBOR() ([]byte, error) {
@@ -151,7 +200,7 @@ func (s *ProofStep) MarshalCBOR() ([]byte, error) {
 		return cbor.Encode(tmpData)
 
 	case ProofStepTypeFork:
-		prefixBytes := nibblesToBytes(s.neighbor.prefix)
+		prefixBytes := nibblesToIndividualBytes(s.neighbor.prefix)
 		tmpData := cbor.NewConstructorEncoder(
 			1,
 			cbor.IndefLengthList{
@@ -190,6 +239,203 @@ type ProofStepNeighbor struct {
 	prefix []Nibble
 	nibble Nibble
 	root   Hash
+}
+
+const branchProofNeighborCount = 4
+
+func (s *ProofStep) unmarshalBranchStep(
+	constructor cbor.ConstructorDecoder,
+) error {
+	var fields []cbor.RawMessage
+	if err := constructor.DecodeFields(&fields); err != nil {
+		return err
+	}
+	if len(fields) != 2 {
+		return errors.New("missing fields")
+	}
+	prefixLen, err := decodeNonNegativeInt(fields[0])
+	if err != nil {
+		return fmt.Errorf("invalid prefix length: %w", err)
+	}
+	neighborsBytes, err := decodeBytes(fields[1])
+	if err != nil {
+		return fmt.Errorf("invalid neighbors: %w", err)
+	}
+	expectedNeighborBytes := branchProofNeighborCount * HashSize
+	if len(neighborsBytes) != expectedNeighborBytes {
+		return fmt.Errorf(
+			"incorrect branch neighbor data length: got %d, want %d",
+			len(neighborsBytes),
+			expectedNeighborBytes,
+		)
+	}
+	neighbors := make([]Hash, 0, branchProofNeighborCount)
+	for i := 0; i < len(neighborsBytes); i += HashSize {
+		neighborHash, err := hashFromBytes(neighborsBytes[i : i+HashSize])
+		if err != nil {
+			return err
+		}
+		neighbors = append(neighbors, neighborHash)
+	}
+	s.stepType = ProofStepTypeBranch
+	s.prefixLength = prefixLen
+	s.neighbors = neighbors
+	return nil
+}
+
+func (s *ProofStep) unmarshalForkStep(constructor cbor.ConstructorDecoder) error {
+	var fields []cbor.RawMessage
+	if err := constructor.DecodeFields(&fields); err != nil {
+		return err
+	}
+	if len(fields) != 2 {
+		return errors.New("missing fields")
+	}
+	prefixLen, err := decodeNonNegativeInt(fields[0])
+	if err != nil {
+		return fmt.Errorf("invalid prefix length: %w", err)
+	}
+	var neighborConstructor cbor.ConstructorDecoder
+	if err := decodeExact(fields[1], &neighborConstructor); err != nil {
+		return fmt.Errorf("invalid neighbor constructor: %w", err)
+	}
+	if neighborConstructor.Tag() != 0 {
+		return fmt.Errorf(
+			"unexpected fork neighbor constructor: %d",
+			neighborConstructor.Tag(),
+		)
+	}
+	var neighborFields []cbor.RawMessage
+	if err := neighborConstructor.DecodeFields(&neighborFields); err != nil {
+		return err
+	}
+	if len(neighborFields) != 3 {
+		return errors.New("fork neighbor missing fields")
+	}
+	neighborIdx, err := decodeNonNegativeInt(neighborFields[0])
+	if err != nil {
+		return fmt.Errorf("invalid fork neighbor index: %w", err)
+	}
+	if neighborIdx > 0xf {
+		return fmt.Errorf("fork neighbor index out of range: %d", neighborIdx)
+	}
+	prefixBytes, err := decodeBytes(neighborFields[1])
+	if err != nil {
+		return fmt.Errorf("invalid fork neighbor prefix: %w", err)
+	}
+	rootBytes, err := decodeBytes(neighborFields[2])
+	if err != nil {
+		return fmt.Errorf("invalid fork neighbor root: %w", err)
+	}
+	neighborRoot, err := hashFromBytes(rootBytes)
+	if err != nil {
+		return fmt.Errorf("invalid fork neighbor root: %w", err)
+	}
+	neighborNibble, err := nibbleFromInt(neighborIdx)
+	if err != nil {
+		return fmt.Errorf("invalid fork neighbor index: %w", err)
+	}
+	s.stepType = ProofStepTypeFork
+	s.prefixLength = prefixLen
+	neighborPrefix, err := individualBytesToNibbles(prefixBytes)
+	if err != nil {
+		return fmt.Errorf("invalid fork neighbor prefix: %w", err)
+	}
+	s.neighbor = ProofStepNeighbor{
+		prefix: neighborPrefix,
+		nibble: neighborNibble,
+		root:   neighborRoot,
+	}
+	return nil
+}
+
+func (s *ProofStep) unmarshalLeafStep(constructor cbor.ConstructorDecoder) error {
+	var fields []cbor.RawMessage
+	if err := constructor.DecodeFields(&fields); err != nil {
+		return err
+	}
+	if len(fields) != 3 {
+		return errors.New("missing fields")
+	}
+	prefixLen, err := decodeNonNegativeInt(fields[0])
+	if err != nil {
+		return fmt.Errorf("invalid prefix length: %w", err)
+	}
+	keyBytes, err := decodeBytes(fields[1])
+	if err != nil {
+		return fmt.Errorf("invalid key: %w", err)
+	}
+	valueBytes, err := decodeBytes(fields[2])
+	if err != nil {
+		return fmt.Errorf("invalid value: %w", err)
+	}
+	leafValue, err := hashFromBytes(valueBytes)
+	if err != nil {
+		return fmt.Errorf("invalid value: %w", err)
+	}
+	s.stepType = ProofStepTypeLeaf
+	s.prefixLength = prefixLen
+	s.neighbor = ProofStepNeighbor{
+		key:   bytesToNibbles(keyBytes),
+		value: leafValue,
+	}
+	return nil
+}
+
+func decodeExact(data []byte, dest any) error {
+	bytesRead, err := cbor.Decode(data, dest)
+	if err != nil {
+		return err
+	}
+	if bytesRead != len(data) {
+		return fmt.Errorf("trailing field data: %d bytes", len(data)-bytesRead)
+	}
+	return nil
+}
+
+func decodeNonNegativeInt(data []byte) (int, error) {
+	var value uint64
+	if err := decodeExact(data, &value); err == nil {
+		if value > uint64(^uint(0)>>1) {
+			return 0, fmt.Errorf("value out of range: %d", value)
+		}
+		return int(value), nil
+	}
+	var signedValue int64
+	if err := decodeExact(data, &signedValue); err == nil {
+		if signedValue < 0 {
+			return 0, fmt.Errorf("negative value: %d", signedValue)
+		}
+		if uint64(signedValue) > uint64(^uint(0)>>1) {
+			return 0, fmt.Errorf("value out of range: %d", signedValue)
+		}
+		return int(signedValue), nil
+	}
+	return 0, errors.New("expected integer")
+}
+
+func decodeBytes(data []byte) ([]byte, error) {
+	var value []byte
+	if err := decodeExact(data, &value); err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
+func nibbleFromInt(value int) (Nibble, error) {
+	if value < 0 || value > 0xf {
+		return 0, fmt.Errorf("nibble out of range: %d", value)
+	}
+	return Nibble(uint8(value)), nil
+}
+
+func hashFromBytes(data []byte) (Hash, error) {
+	if len(data) != HashSize {
+		return Hash{}, fmt.Errorf("expected %d bytes for hash, got %d", HashSize, len(data))
+	}
+	var ret Hash
+	copy(ret[:], data)
+	return ret, nil
 }
 
 func merkleProof(nodes []Node, myIdx int) []Hash {
