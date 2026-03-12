@@ -16,6 +16,7 @@ package mpf
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strings"
 )
 
@@ -54,6 +55,31 @@ func nibblesToBytes(data []Nibble) []byte {
 		ret = append(ret, tmpByte)
 	}
 	return ret
+}
+
+// nibblesToIndividualBytes converts each Nibble to a single byte (0x00-0x0f).
+// This is used for CBOR encoding of fork neighbor prefixes, where each nibble
+// occupies its own byte rather than being packed in pairs.
+func nibblesToIndividualBytes(data []Nibble) []byte {
+	ret := make([]byte, len(data))
+	for i, n := range data {
+		ret[i] = byte(n)
+	}
+	return ret
+}
+
+// individualBytesToNibbles converts bytes where each byte represents a single
+// nibble value (0x00-0x0f) back into a Nibble slice. Returns an error if any
+// byte exceeds the nibble range.
+func individualBytesToNibbles(data []byte) ([]Nibble, error) {
+	ret := make([]Nibble, len(data))
+	for i, b := range data {
+		if b > 0x0f {
+			return nil, fmt.Errorf("byte %d out of nibble range: 0x%02x", i, b)
+		}
+		ret[i] = Nibble(b)
+	}
+	return ret, nil
 }
 
 // nibblesToHexString converts a series of Nibbles into a hex string representing those nibbles.
