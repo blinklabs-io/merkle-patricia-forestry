@@ -1,8 +1,8 @@
 module github.com/blinklabs-io/merkle-patricia-forestry
 
-go 1.24.0
+go 1.25.7
 
-toolchain go1.24.1
+toolchain go1.25.8
 
 require (
 	github.com/blinklabs-io/gouroboros v0.160.2
