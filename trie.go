@@ -147,32 +147,29 @@ func (t *Trie) Delete(key []byte) error {
 		// collapse root if it now has a single child:
 		// splice the vanished branch's prefix and the child slot nibble into that child.
 		if n.size == 1 {
-			var (
-				onlyIdx   int
-				onlyChild Node
-			)
-			for i, c := range n.children {
-				if c != nil {
-					onlyIdx, onlyChild = i, c
-					break
+			for onlyIdx, child := range n.children {
+				if child == nil {
+					continue
 				}
+				switch c := child.(type) {
+				case *Leaf:
+					// new suffix = n.prefix ++ [onlyIdx] ++ c.suffix
+					newSuffix := slices.Concat(n.prefix, []Nibble{Nibble(onlyIdx)}, c.suffix)
+					c.suffix = newSuffix
+					c.updateHash()
+					t.rootNode = c
+				case *Branch:
+					// new prefix = n.prefix ++ [onlyIdx] ++ c.prefix
+					newPrefix := slices.Concat(n.prefix, []Nibble{Nibble(onlyIdx)}, c.prefix)
+					c.prefix = newPrefix
+					c.updateHash()
+					t.rootNode = c
+				default:
+					panic("unknown node type...this should never happen")
+				}
+				return nil
 			}
-			switch c := onlyChild.(type) {
-			case *Leaf:
-				// new suffix = n.prefix ++ [onlyIdx] ++ c.suffix
-				newSuffix := slices.Concat(n.prefix, []Nibble{Nibble(onlyIdx)}, c.suffix)
-				c.suffix = newSuffix
-				c.updateHash()
-				t.rootNode = c
-			case *Branch:
-				// new prefix = n.prefix ++ [onlyIdx] ++ c.prefix
-				newPrefix := slices.Concat(n.prefix, []Nibble{Nibble(onlyIdx)}, c.prefix)
-				c.prefix = newPrefix
-				c.updateHash()
-				t.rootNode = c
-			default:
-				panic("unknown node type...this should never happen")
-			}
+			panic("branch size does not match children...this should never happen")
 		}
 	default:
 		panic("unknown node type...this should never happen")
