@@ -212,3 +212,90 @@ func (t *Trie) Prove(key []byte) (*Proof, error) {
 	path := keyToPath(key)
 	return t.rootNode.generateProof(path)
 }
+
+// ProveInsert returns the proof required to insert or update the specified key
+// against the trie's current root without modifying the trie. Its CBOR encoding
+// matches Prove after Set has inserted or updated the key.
+func (t *Trie) ProveInsert(key []byte) (*Proof, error) {
+	if t.rootNode == nil {
+		return &Proof{}, nil
+	}
+	path := keyToPath(key)
+	return generateInsertProof(t.rootNode, path)
+}
+
+func generateInsertProof(node Node, path []Nibble) (*Proof, error) {
+	switch n := node.(type) {
+	case *Leaf:
+		if string(path) == string(n.suffix) {
+			return n.generateProof(path)
+		}
+
+		prefix := commonPrefix(path, n.suffix)
+		pathMinusPrefix := path[len(prefix):]
+		leafSuffixMinusPrefix := n.suffix[len(prefix):]
+		if len(pathMinusPrefix) == 0 || len(leafSuffixMinusPrefix) == 0 {
+			return nil, ErrKeyNotExist
+		}
+
+		childIdx := int(pathMinusPrefix[0])
+		leafChildIdx := int(leafSuffixMinusPrefix[0])
+		leafCopy := newLeaf(leafSuffixMinusPrefix[1:], n.key, n.value)
+
+		children := make([]Node, 16)
+		children[leafChildIdx] = leafCopy
+
+		proof := newProof(path, nil)
+		proof.Rewind(childIdx, len(prefix), children)
+		return proof, nil
+
+	case *Branch:
+		prefix := commonPrefix(path, n.prefix)
+		if string(prefix) != string(n.prefix) {
+			pathMinusPrefix := path[len(prefix):]
+			branchPrefixMinusPrefix := n.prefix[len(prefix):]
+			if len(pathMinusPrefix) == 0 || len(branchPrefixMinusPrefix) == 0 {
+				return nil, ErrKeyNotExist
+			}
+
+			childIdx := int(pathMinusPrefix[0])
+			branchChildIdx := int(branchPrefixMinusPrefix[0])
+			branchCopy := &Branch{
+				prefix:   append([]Nibble(nil), branchPrefixMinusPrefix[1:]...),
+				children: n.children,
+				size:     n.size,
+			}
+			branchCopy.updateHash()
+
+			children := make([]Node, 16)
+			children[branchChildIdx] = branchCopy
+
+			proof := newProof(path, nil)
+			proof.Rewind(childIdx, len(prefix), children)
+			return proof, nil
+		}
+
+		pathMinusPrefix := path[len(n.prefix):]
+		if len(pathMinusPrefix) == 0 {
+			return nil, ErrKeyNotExist
+		}
+		childIdx := int(pathMinusPrefix[0])
+		subPath := pathMinusPrefix[1:]
+
+		if n.children[childIdx] == nil {
+			proof := newProof(path, nil)
+			proof.Rewind(childIdx, len(n.prefix), n.children[:])
+			return proof, nil
+		}
+
+		proof, err := generateInsertProof(n.children[childIdx], subPath)
+		if err != nil {
+			return nil, err
+		}
+		proof.Rewind(childIdx, len(n.prefix), n.children[:])
+		return proof, nil
+
+	default:
+		panic("unknown node type...this should never happen")
+	}
+}
