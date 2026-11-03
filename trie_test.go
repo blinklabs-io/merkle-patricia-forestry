@@ -19,42 +19,44 @@ import (
 )
 
 // NOTE: this hash and entry list comes from the aiken-lang/merkel-patricia-forestry tests
-var fruitsExpectedHash string = "4acd78f345a686361df77541b2e0b533f53362e36620a1fdd3a13e0b61a3b078"
-var fruitsTestEntries = []struct {
-	key   string
-	value string
-}{
-	{key: `apple[uid: 58]`, value: `🍎`},
-	{key: `apricot[uid: 0]`, value: `🤷`},
-	{key: `banana[uid: 218]`, value: `🍌`},
-	{key: `blueberry[uid: 0]`, value: `🫐`},
-	{key: `cherry[uid: 0]`, value: `🍒`},
-	{key: `coconut[uid: 0]`, value: `🥥`},
-	{key: `cranberry[uid: 0]`, value: `🤷`},
-	{key: `fig[uid: 68267]`, value: `🤷`},
-	{key: `grapefruit[uid: 0]`, value: `🤷`},
-	{key: `grapes[uid: 0]`, value: `🍇`},
-	{key: `guava[uid: 344]`, value: `🤷`},
-	{key: `kiwi[uid: 0]`, value: `🥝`},
-	{key: `kumquat[uid: 0]`, value: `🤷`},
-	{key: `lemon[uid: 0]`, value: `🍋`},
-	{key: `lime[uid: 0]`, value: `🤷`},
-	{key: `mango[uid: 0]`, value: `🥭`},
-	{key: `orange[uid: 0]`, value: `🍊`},
-	{key: `papaya[uid: 0]`, value: `🤷`},
-	{key: `passionfruit[uid: 0]`, value: `🤷`},
-	{key: `peach[uid: 0]`, value: `🍑`},
-	{key: `pear[uid: 0]`, value: `🍐`},
-	{key: `pineapple[uid: 12577]`, value: `🍍`},
-	{key: `plum[uid: 15492]`, value: `🤷`},
-	{key: `pomegranate[uid: 0]`, value: `🤷`},
-	{key: `raspberry[uid: 0]`, value: `🤷`},
-	{key: `strawberry[uid: 2532]`, value: `🍓`},
-	{key: `tangerine[uid: 11]`, value: `🍊`},
-	{key: `tomato[uid: 83468]`, value: `🍅`},
-	{key: `watermelon[uid: 0]`, value: `🍉`},
-	{key: `yuzu[uid: 0]`, value: `🤷`},
-}
+var (
+	fruitsExpectedHash string = "4acd78f345a686361df77541b2e0b533f53362e36620a1fdd3a13e0b61a3b078"
+	fruitsTestEntries         = []struct {
+		key   string
+		value string
+	}{
+		{key: `apple[uid: 58]`, value: `🍎`},
+		{key: `apricot[uid: 0]`, value: `🤷`},
+		{key: `banana[uid: 218]`, value: `🍌`},
+		{key: `blueberry[uid: 0]`, value: `🫐`},
+		{key: `cherry[uid: 0]`, value: `🍒`},
+		{key: `coconut[uid: 0]`, value: `🥥`},
+		{key: `cranberry[uid: 0]`, value: `🤷`},
+		{key: `fig[uid: 68267]`, value: `🤷`},
+		{key: `grapefruit[uid: 0]`, value: `🤷`},
+		{key: `grapes[uid: 0]`, value: `🍇`},
+		{key: `guava[uid: 344]`, value: `🤷`},
+		{key: `kiwi[uid: 0]`, value: `🥝`},
+		{key: `kumquat[uid: 0]`, value: `🤷`},
+		{key: `lemon[uid: 0]`, value: `🍋`},
+		{key: `lime[uid: 0]`, value: `🤷`},
+		{key: `mango[uid: 0]`, value: `🥭`},
+		{key: `orange[uid: 0]`, value: `🍊`},
+		{key: `papaya[uid: 0]`, value: `🤷`},
+		{key: `passionfruit[uid: 0]`, value: `🤷`},
+		{key: `peach[uid: 0]`, value: `🍑`},
+		{key: `pear[uid: 0]`, value: `🍐`},
+		{key: `pineapple[uid: 12577]`, value: `🍍`},
+		{key: `plum[uid: 15492]`, value: `🤷`},
+		{key: `pomegranate[uid: 0]`, value: `🤷`},
+		{key: `raspberry[uid: 0]`, value: `🤷`},
+		{key: `strawberry[uid: 2532]`, value: `🍓`},
+		{key: `tangerine[uid: 11]`, value: `🍊`},
+		{key: `tomato[uid: 83468]`, value: `🍅`},
+		{key: `watermelon[uid: 0]`, value: `🍉`},
+		{key: `yuzu[uid: 0]`, value: `🤷`},
+	}
+)
 
 func TestTrieEmpty(t *testing.T) {
 	trie := NewTrie()
