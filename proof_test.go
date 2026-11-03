@@ -293,7 +293,7 @@ func TestProofUnmarshalRejectsInvalidBranchNeighborLength(t *testing.T) {
 func TestBigTrieProofMarshalCbor(t *testing.T) {
 	trie := NewTrie()
 
-	var bigTrieEntries = []struct {
+	bigTrieEntries := []struct {
 		key   string
 		value string
 	}{
