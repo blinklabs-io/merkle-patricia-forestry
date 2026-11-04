@@ -4460,7 +4460,10 @@ func assertProofStepsEqual(t *testing.T, got *Proof, want *Proof) {
 					wantStep.neighbor.nibble,
 				)
 			}
-			if !slices.Equal(gotStep.neighbor.prefix, wantStep.neighbor.prefix) {
+			if !slices.Equal(
+				gotStep.neighbor.prefix,
+				wantStep.neighbor.prefix,
+			) {
 				t.Fatalf("proof step %d neighbor prefix mismatch", idx)
 			}
 			if gotStep.neighbor.root != wantStep.neighbor.root {
@@ -4479,7 +4482,11 @@ func assertProofStepsEqual(t *testing.T, got *Proof, want *Proof) {
 				t.Fatalf("proof step %d neighbor value mismatch", idx)
 			}
 		default:
-			t.Fatalf("proof step %d has unknown type: %d", idx, wantStep.stepType)
+			t.Fatalf(
+				"proof step %d has unknown type: %d",
+				idx,
+				wantStep.stepType,
+			)
 		}
 	}
 }
