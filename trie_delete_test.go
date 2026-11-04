@@ -14,7 +14,10 @@
 
 package mpf
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
 
 func TestTrieDeleteCollapsesNestedBranch(t *testing.T) {
 	type entry struct {
@@ -78,8 +81,29 @@ func TestTrieDeleteCollapsesNestedBranch(t *testing.T) {
 						entry.value,
 					)
 				}
-				if _, err := trie.Prove([]byte(entry.key)); err != nil {
+			}
+			for _, entry := range testCase.entries {
+				if entry.key == testCase.deleteKey {
+					continue
+				}
+				got, err := trie.Prove([]byte(entry.key))
+				if err != nil {
 					t.Fatalf("Prove(%s): %v", entry.key, err)
+				}
+				wantProof, err := want.Prove([]byte(entry.key))
+				if err != nil {
+					t.Fatalf("want Prove(%s): %v", entry.key, err)
+				}
+				gotCBOR, err := got.MarshalCBOR()
+				if err != nil {
+					t.Fatalf("marshal proof(%s): %v", entry.key, err)
+				}
+				wantCBOR, err := wantProof.MarshalCBOR()
+				if err != nil {
+					t.Fatalf("marshal want proof(%s): %v", entry.key, err)
+				}
+				if !bytes.Equal(gotCBOR, wantCBOR) {
+					t.Fatalf("proof(%s) differs after delete", entry.key)
 				}
 			}
 			if trie.Hash() != want.Hash() {
