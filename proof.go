@@ -175,7 +175,10 @@ func (s *ProofStep) UnmarshalCBOR(data []byte) error {
 			return fmt.Errorf("decode leaf proof step: %w", err)
 		}
 	default:
-		return fmt.Errorf("unknown proof step constructor: %d", constructor.Tag())
+		return fmt.Errorf(
+			"unknown proof step constructor: %d",
+			constructor.Tag(),
+		)
 	}
 	return nil
 }
@@ -283,7 +286,9 @@ func (s *ProofStep) unmarshalBranchStep(
 	return nil
 }
 
-func (s *ProofStep) unmarshalForkStep(constructor cbor.ConstructorDecoder) error {
+func (s *ProofStep) unmarshalForkStep(
+	constructor cbor.ConstructorDecoder,
+) error {
 	var fields []cbor.RawMessage
 	if err := constructor.DecodeFields(&fields); err != nil {
 		return err
@@ -349,7 +354,9 @@ func (s *ProofStep) unmarshalForkStep(constructor cbor.ConstructorDecoder) error
 	return nil
 }
 
-func (s *ProofStep) unmarshalLeafStep(constructor cbor.ConstructorDecoder) error {
+func (s *ProofStep) unmarshalLeafStep(
+	constructor cbor.ConstructorDecoder,
+) error {
 	var fields []cbor.RawMessage
 	if err := constructor.DecodeFields(&fields); err != nil {
 		return err
@@ -431,7 +438,11 @@ func nibbleFromInt(value int) (Nibble, error) {
 
 func hashFromBytes(data []byte) (Hash, error) {
 	if len(data) != HashSize {
-		return Hash{}, fmt.Errorf("expected %d bytes for hash, got %d", HashSize, len(data))
+		return Hash{}, fmt.Errorf(
+			"expected %d bytes for hash, got %d",
+			HashSize,
+			len(data),
+		)
 	}
 	var ret Hash
 	copy(ret[:], data)

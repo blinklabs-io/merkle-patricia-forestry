@@ -67,7 +67,11 @@ func TestProofForkPrefixOddCbor(t *testing.T) {
 				trie.Set([]byte(k), []byte("v:"+k))
 			}
 			if root := hex.EncodeToString(trie.Hash().Bytes()); root != c.wantRoot {
-				t.Fatalf("trie root mismatch\n got=%s\nwant=%s", root, c.wantRoot)
+				t.Fatalf(
+					"trie root mismatch\n got=%s\nwant=%s",
+					root,
+					c.wantRoot,
+				)
 			}
 			proof, err := trie.Prove([]byte(c.key))
 			if err != nil {
@@ -78,7 +82,11 @@ func TestProofForkPrefixOddCbor(t *testing.T) {
 				t.Fatalf("encode proof: %v", err)
 			}
 			if got := hex.EncodeToString(b); got != c.wantCbor {
-				t.Fatalf("proof CBOR mismatch\n got=%s\nwant=%s", got, c.wantCbor)
+				t.Fatalf(
+					"proof CBOR mismatch\n got=%s\nwant=%s",
+					got,
+					c.wantCbor,
+				)
 			}
 		})
 	}

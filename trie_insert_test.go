@@ -27,14 +27,38 @@ func TestProveInsertMatchesInsertion(t *testing.T) {
 	}{
 		{"empty", nil, "insert-0"},
 		{"divergent root leaf", []string{"insert-14"}, "insert-26"},
-		{"divergent root branch", []string{"insert-14", "insert-26"}, "insert-1"},
+		{
+			"divergent root branch",
+			[]string{"insert-14", "insert-26"},
+			"insert-1",
+		},
 		{"empty child", []string{"insert-1", "insert-2"}, "insert-3"},
-		{"nested empty child", []string{"insert-14", "insert-26", "insert-1"}, "insert-41"},
-		{"nested divergent branch", []string{"insert-14", "insert-26", "insert-1"}, "insert-0"},
-		{"nested divergent leaf", []string{"insert-14", "insert-1"}, "insert-26"},
-		{"multiple neighbors", []string{"insert-1", "insert-2", "insert-3"}, "insert-4"},
+		{
+			"nested empty child",
+			[]string{"insert-14", "insert-26", "insert-1"},
+			"insert-41",
+		},
+		{
+			"nested divergent branch",
+			[]string{"insert-14", "insert-26", "insert-1"},
+			"insert-0",
+		},
+		{
+			"nested divergent leaf",
+			[]string{"insert-14", "insert-1"},
+			"insert-26",
+		},
+		{
+			"multiple neighbors",
+			[]string{"insert-1", "insert-2", "insert-3"},
+			"insert-4",
+		},
 		{"root update", []string{"insert-14"}, "insert-14"},
-		{"nested update", []string{"insert-14", "insert-26", "insert-1"}, "insert-14"},
+		{
+			"nested update",
+			[]string{"insert-14", "insert-26", "insert-1"},
+			"insert-14",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -71,7 +95,12 @@ func TestProveInsertMatchesInsertion(t *testing.T) {
 			for _, key := range tc.keys {
 				value, err := trie.Get([]byte(key))
 				if err != nil || !bytes.Equal(value, []byte("v:"+key)) {
-					t.Fatalf("ProveInsert changed value for %q: %q, %v", key, value, err)
+					t.Fatalf(
+						"ProveInsert changed value for %q: %q, %v",
+						key,
+						value,
+						err,
+					)
 				}
 				existing, err := trie.Prove([]byte(key))
 				if err != nil {
@@ -95,7 +124,11 @@ func TestProveInsertMatchesInsertion(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(data, want) {
-				t.Fatalf("insertion proof CBOR differs from Prove after Set:\ngot  %x\nwant %x", data, want)
+				t.Fatalf(
+					"insertion proof CBOR differs from Prove after Set:\ngot  %x\nwant %x",
+					data,
+					want,
+				)
 			}
 		})
 	}
