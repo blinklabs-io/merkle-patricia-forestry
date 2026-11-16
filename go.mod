@@ -1,10 +1,10 @@
 module github.com/blinklabs-io/merkle-patricia-forestry
 
-go 1.26.10
+go 1.26.11
 
 require (
-	github.com/blinklabs-io/gouroboros v0.218.0
-	golang.org/x/crypto v0.58.0
+	github.com/blinklabs-io/gouroboros v0.220.1
+	golang.org/x/crypto v0.58.1-0.20261009181718-2f1f834330b2
 )
 
 require (
